@@ -12,14 +12,27 @@ import Reports from "@/pages/reports/index";
 import ReportDetail from "@/pages/reports/detail";
 import Patterns from "@/pages/patterns";
 import Stats from "@/pages/stats";
+import Demo from "@/pages/demo";
+import FeeCalc from "@/pages/feecalc";
+import Extension from "@/pages/extension";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 2,
+    },
+  },
+});
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/demo" component={Demo} />
+      <Route path="/extension" component={Extension} />
+      <Route path="/fee-calculator" component={FeeCalc} />
       <Route path="/trust" component={TrustRatings} />
       <Route path="/trust/:domain" component={DomainDetail} />
       <Route path="/reports" component={Reports} />

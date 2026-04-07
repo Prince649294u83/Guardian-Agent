@@ -221,6 +221,65 @@ export interface DomainOffenderSummary {
   totalScans: number;
 }
 
+export interface DemoScanBody {
+  domain: string;
+  url: string;
+  pageText: string;
+  timerElements?: string[];
+  stockAlerts?: string[];
+  buttonLabels?: string[];
+  priceStrings?: string[];
+  /**
+   * Name of the preset scenario being run
+   * @nullable
+   */
+  scenarioName?: string | null;
+}
+
+export interface DemoScanResult {
+  report: DetectionReport;
+  darkPatternReport: DarkPatternReport;
+  trustRating: TrustRating;
+}
+
+export interface FeeEstimateBody {
+  domain: string;
+  /** Type of merchant: hotel, airline, ecommerce, vacation_rental, car_rental */
+  merchantType: string;
+  listedPrice: number;
+  currency?: string;
+  /** @nullable */
+  itemDescription?: string | null;
+}
+
+export type FeeEstimateResultConfidence =
+  (typeof FeeEstimateResultConfidence)[keyof typeof FeeEstimateResultConfidence];
+
+export const FeeEstimateResultConfidence = {
+  high: "high",
+  medium: "medium",
+  low: "low",
+} as const;
+
+export type FeeEstimateResultWarningLevel =
+  (typeof FeeEstimateResultWarningLevel)[keyof typeof FeeEstimateResultWarningLevel];
+
+export const FeeEstimateResultWarningLevel = {
+  green: "green",
+  orange: "orange",
+  red: "red",
+} as const;
+
+export interface FeeEstimateResult {
+  listedPrice: number;
+  estimatedTotal: number;
+  savingsOpportunity: number;
+  feeBreakdown: FeeItem[];
+  confidence: FeeEstimateResultConfidence;
+  warningLevel: FeeEstimateResultWarningLevel;
+  explanation: string;
+}
+
 export type ListReportsParams = {
   /**
    * @nullable

@@ -20,10 +20,14 @@ import type {
   ClassifyUpsellBody,
   CreateReportBody,
   DarkPatternReport,
+  DemoScanBody,
+  DemoScanResult,
   DetectDarkPatternsBody,
   DetectionReport,
   DomainOffenderSummary,
   ErrorResponse,
+  FeeEstimateBody,
+  FeeEstimateResult,
   GetTopOffendersParams,
   HealthStatus,
   ListReportsParams,
@@ -963,6 +967,180 @@ export function useGetPatternBreakdown<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Detects dark patterns, saves report, and updates trust rating in one call. Perfect for live demos.
+ * @summary All-in-one demo scan
+ */
+export const getDemoScanUrl = () => {
+  return `/api/demo/scan`;
+};
+
+export const demoScan = async (
+  demoScanBody: DemoScanBody,
+  options?: RequestInit,
+): Promise<DemoScanResult> => {
+  return customFetch<DemoScanResult>(getDemoScanUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(demoScanBody),
+  });
+};
+
+export const getDemoScanMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof demoScan>>,
+    TError,
+    { data: BodyType<DemoScanBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof demoScan>>,
+  TError,
+  { data: BodyType<DemoScanBody> },
+  TContext
+> => {
+  const mutationKey = ["demoScan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof demoScan>>,
+    { data: BodyType<DemoScanBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return demoScan(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DemoScanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof demoScan>>
+>;
+export type DemoScanMutationBody = BodyType<DemoScanBody>;
+export type DemoScanMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary All-in-one demo scan
+ */
+export const useDemoScan = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof demoScan>>,
+    TError,
+    { data: BodyType<DemoScanBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof demoScan>>,
+  TError,
+  { data: BodyType<DemoScanBody> },
+  TContext
+> => {
+  return useMutation(getDemoScanMutationOptions(options));
+};
+
+/**
+ * Uses AI to estimate hidden fees and total true price for a given site and listing price
+ * @summary Estimate true final price
+ */
+export const getDemoFeeEstimateUrl = () => {
+  return `/api/demo/fee-estimate`;
+};
+
+export const demoFeeEstimate = async (
+  feeEstimateBody: FeeEstimateBody,
+  options?: RequestInit,
+): Promise<FeeEstimateResult> => {
+  return customFetch<FeeEstimateResult>(getDemoFeeEstimateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(feeEstimateBody),
+  });
+};
+
+export const getDemoFeeEstimateMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof demoFeeEstimate>>,
+    TError,
+    { data: BodyType<FeeEstimateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof demoFeeEstimate>>,
+  TError,
+  { data: BodyType<FeeEstimateBody> },
+  TContext
+> => {
+  const mutationKey = ["demoFeeEstimate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof demoFeeEstimate>>,
+    { data: BodyType<FeeEstimateBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return demoFeeEstimate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DemoFeeEstimateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof demoFeeEstimate>>
+>;
+export type DemoFeeEstimateMutationBody = BodyType<FeeEstimateBody>;
+export type DemoFeeEstimateMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Estimate true final price
+ */
+export const useDemoFeeEstimate = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof demoFeeEstimate>>,
+    TError,
+    { data: BodyType<FeeEstimateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof demoFeeEstimate>>,
+  TError,
+  { data: BodyType<FeeEstimateBody> },
+  TContext
+> => {
+  return useMutation(getDemoFeeEstimateMutationOptions(options));
+};
 
 /**
  * Returns the domains with the most detected dark patterns

@@ -263,6 +263,58 @@ paths:
               schema:
                 $ref: "#/components/schemas/PatternBreakdown"
 
+  /demo/scan:
+    post:
+      operationId: demoScan
+      tags: [analysis]
+      summary: All-in-one demo scan
+      description: Detects dark patterns, saves report, and updates trust rating in one call. Perfect for live demos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemoScanBody"
+      responses:
+        "200":
+          description: Scan result with saved report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoScanResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /demo/fee-estimate:
+    post:
+      operationId: demoFeeEstimate
+      tags: [analysis]
+      summary: Estimate true final price
+      description: Uses AI to estimate hidden fees and total true price for a given site and listing price
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeeEstimateBody"
+      responses:
+        "200":
+          description: Fee estimate result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeEstimateResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /stats/top-offenders:
     get:
       operationId: getTopOffenders
@@ -736,3 +788,100 @@ components:
         - trustScore
         - tier
         - totalScans
+
+    DemoScanBody:
+      type: object
+      properties:
+        domain:
+          type: string
+        url:
+          type: string
+        pageText:
+          type: string
+        timerElements:
+          type: array
+          items:
+            type: string
+        stockAlerts:
+          type: array
+          items:
+            type: string
+        buttonLabels:
+          type: array
+          items:
+            type: string
+        priceStrings:
+          type: array
+          items:
+            type: string
+        scenarioName:
+          type: ["string", "null"]
+          description: Name of the preset scenario being run
+      required:
+        - domain
+        - url
+        - pageText
+
+    DemoScanResult:
+      type: object
+      properties:
+        report:
+          $ref: "#/components/schemas/DetectionReport"
+        darkPatternReport:
+          $ref: "#/components/schemas/DarkPatternReport"
+        trustRating:
+          $ref: "#/components/schemas/TrustRating"
+      required:
+        - report
+        - darkPatternReport
+        - trustRating
+
+    FeeEstimateBody:
+      type: object
+      properties:
+        domain:
+          type: string
+        merchantType:
+          type: string
+          description: "Type of merchant: hotel, airline, ecommerce, vacation_rental, car_rental"
+        listedPrice:
+          type: number
+        currency:
+          type: string
+          default: USD
+        itemDescription:
+          type: ["string", "null"]
+      required:
+        - domain
+        - merchantType
+        - listedPrice
+
+    FeeEstimateResult:
+      type: object
+      properties:
+        listedPrice:
+          type: number
+        estimatedTotal:
+          type: number
+        savingsOpportunity:
+          type: number
+        feeBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeeItem"
+        confidence:
+          type: string
+          enum: [high, medium, low]
+        warningLevel:
+          type: string
+          enum: [green, orange, red]
+        explanation:
+          type: string
+      required:
+        - listedPrice
+        - estimatedTotal
+        - savingsOpportunity
+        - feeBreakdown
+        - confidence
+        - warningLevel
+        - explanation

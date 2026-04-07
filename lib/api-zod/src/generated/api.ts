@@ -308,6 +308,132 @@ export const GetPatternBreakdownResponse = zod.object({
 });
 
 /**
+ * Detects dark patterns, saves report, and updates trust rating in one call. Perfect for live demos.
+ * @summary All-in-one demo scan
+ */
+export const DemoScanBody = zod.object({
+  domain: zod.string(),
+  url: zod.string(),
+  pageText: zod.string(),
+  timerElements: zod.array(zod.string()).optional(),
+  stockAlerts: zod.array(zod.string()).optional(),
+  buttonLabels: zod.array(zod.string()).optional(),
+  priceStrings: zod.array(zod.string()).optional(),
+  scenarioName: zod
+    .string()
+    .nullish()
+    .describe("Name of the preset scenario being run"),
+});
+
+export const DemoScanResponse = zod.object({
+  report: zod.object({
+    id: zod.number(),
+    domain: zod.string(),
+    url: zod.string(),
+    trustScore: zod.number(),
+    falseUrgencyDetected: zod.boolean(),
+    falseScarcityDetected: zod.boolean(),
+    confirmShamingDetected: zod.boolean(),
+    hiddenFeesDetected: zod.boolean(),
+    preCheckedAddOnsDetected: zod.boolean(),
+    misdirectionDetected: zod.boolean(),
+    totalPatternsDetected: zod.number(),
+    hiddenFeesTotal: zod.number().nullish(),
+    summary: zod.string(),
+    createdAt: zod.string(),
+  }),
+  darkPatternReport: zod.object({
+    domain: zod.string(),
+    falseUrgency: zod.object({
+      detected: zod.boolean(),
+      evidence: zod.string(),
+      isTimerFake: zod.boolean().nullish(),
+    }),
+    falseScarcity: zod.object({
+      detected: zod.boolean(),
+      evidence: zod.string(),
+    }),
+    confirmShaming: zod.object({
+      detected: zod.boolean(),
+      shamingText: zod.string(),
+      rewrittenText: zod.string(),
+    }),
+    hiddenFees: zod.object({
+      detected: zod.boolean(),
+      feeItems: zod.array(
+        zod.object({
+          label: zod.string(),
+          amount: zod.number(),
+        }),
+      ),
+      totalExtra: zod.number().nullish(),
+    }),
+    preCheckedAddOns: zod.object({
+      detected: zod.boolean(),
+      fieldIds: zod.array(zod.string()),
+      addOnLabels: zod.array(zod.string()),
+    }),
+    misdirection: zod.object({
+      detected: zod.boolean(),
+      hiddenDeclineText: zod.string(),
+    }),
+    trustScore: zod.number().describe("Trust score 0-100"),
+    summary: zod.string().describe("Human-readable summary of findings"),
+  }),
+  trustRating: zod.object({
+    id: zod.number(),
+    domain: zod.string(),
+    score: zod.number().describe("Trust score 0-100"),
+    tier: zod.enum([
+      "gold",
+      "clean",
+      "neutral",
+      "suspicious",
+      "high_manipulation",
+    ]),
+    totalScans: zod.number(),
+    patternsDetectedCount: zod.number(),
+    hiddenFeesCount: zod.number(),
+    lastScannedAt: zod.string().nullish(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  }),
+});
+
+/**
+ * Uses AI to estimate hidden fees and total true price for a given site and listing price
+ * @summary Estimate true final price
+ */
+export const demoFeeEstimateBodyCurrencyDefault = `USD`;
+
+export const DemoFeeEstimateBody = zod.object({
+  domain: zod.string(),
+  merchantType: zod
+    .string()
+    .describe(
+      "Type of merchant: hotel, airline, ecommerce, vacation_rental, car_rental",
+    ),
+  listedPrice: zod.number(),
+  currency: zod.string().default(demoFeeEstimateBodyCurrencyDefault),
+  itemDescription: zod.string().nullish(),
+});
+
+export const DemoFeeEstimateResponse = zod.object({
+  listedPrice: zod.number(),
+  estimatedTotal: zod.number(),
+  savingsOpportunity: zod.number(),
+  feeBreakdown: zod.array(
+    zod.object({
+      label: zod.string(),
+      amount: zod.number(),
+    }),
+  ),
+  confidence: zod.enum(["high", "medium", "low"]),
+  warningLevel: zod.enum(["green", "orange", "red"]),
+  explanation: zod.string(),
+});
+
+/**
  * Returns the domains with the most detected dark patterns
  * @summary Get top offending domains
  */
