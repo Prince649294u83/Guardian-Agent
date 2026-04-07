@@ -3,13 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Guardian Agent API — dark pattern detection and checkout protection
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: analysis
+    description: Dark pattern analysis
+  - name: trust
+    description: Site trust ratings
+  - name: reports
+    description: Detection reports and history
+  - name: stats
+    description: Usage statistics and summaries
 paths:
   /healthz:
     get:
@@ -24,6 +32,259 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /analysis/detect:
+    post:
+      operationId: detectDarkPatterns
+      tags: [analysis]
+      summary: Detect dark patterns on a page
+      description: Analyzes page content for dark patterns using AI classification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DetectDarkPatternsBody"
+      responses:
+        "200":
+          description: Detection result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DarkPatternReport"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analysis/classify-upsell:
+    post:
+      operationId: classifyUpsell
+      tags: [analysis]
+      summary: Classify an upsell page type
+      description: Identifies what type of upsell/add-on screen is being shown
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassifyUpsellBody"
+      responses:
+        "200":
+          description: Upsell classification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpsellClassification"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /trust:
+    get:
+      operationId: listTrustRatings
+      tags: [trust]
+      summary: List all site trust ratings
+      description: Returns trust ratings for all tracked domains
+      responses:
+        "200":
+          description: List of trust ratings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrustRating"
+
+  /trust/{domain}:
+    get:
+      operationId: getTrustRating
+      tags: [trust]
+      summary: Get trust rating for a domain
+      description: Returns the trust rating and history for a specific domain
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Trust rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrustRating"
+        "404":
+          description: Domain not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: upsertTrustRating
+      tags: [trust]
+      summary: Create or update trust rating for a domain
+      description: Updates the trust rating after a checkout interaction
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertTrustRatingBody"
+      responses:
+        "200":
+          description: Updated trust rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrustRating"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List detection reports
+      description: Returns recent dark pattern detection reports
+      parameters:
+        - name: domain
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DetectionReport"
+
+    post:
+      operationId: createReport
+      tags: [reports]
+      summary: Save a detection report
+      description: Stores a dark pattern detection report for a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReportBody"
+      responses:
+        "201":
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetectionReport"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a detection report by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Detection report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetectionReport"
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stats/summary:
+    get:
+      operationId: getStatsSummary
+      tags: [stats]
+      summary: Get overall statistics summary
+      description: Returns aggregated stats — total scans, patterns detected, money saved estimates
+      responses:
+        "200":
+          description: Statistics summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsSummary"
+
+  /stats/pattern-breakdown:
+    get:
+      operationId: getPatternBreakdown
+      tags: [stats]
+      summary: Get pattern detection breakdown
+      description: Returns counts by dark pattern type across all reports
+      responses:
+        "200":
+          description: Pattern breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatternBreakdown"
+
+  /stats/top-offenders:
+    get:
+      operationId: getTopOffenders
+      tags: [stats]
+      summary: Get top offending domains
+      description: Returns the domains with the most detected dark patterns
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Top offending domains
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DomainOffenderSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +295,444 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    DetectDarkPatternsBody:
+      type: object
+      properties:
+        domain:
+          type: string
+          description: The website domain being analyzed
+        pageText:
+          type: string
+          description: Extracted text content from the page
+        timerElements:
+          type: array
+          items:
+            type: string
+          description: Text from countdown timer elements found on the page
+        stockAlerts:
+          type: array
+          items:
+            type: string
+          description: Text from stock/scarcity alert elements
+        buttonLabels:
+          type: array
+          items:
+            type: string
+          description: Text from all buttons on the page
+        formFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormFieldInfo"
+          description: Form field info including pre-checked state
+        priceStrings:
+          type: array
+          items:
+            type: string
+          description: All price strings found on the page
+      required:
+        - domain
+        - pageText
+
+    FormFieldInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+        checked:
+          type: ["boolean", "null"]
+        optional:
+          type: ["boolean", "null"]
+      required:
+        - id
+        - label
+        - type
+
+    DarkPatternReport:
+      type: object
+      properties:
+        domain:
+          type: string
+        falseUrgency:
+          $ref: "#/components/schemas/FalseUrgencyResult"
+        falseScarcity:
+          $ref: "#/components/schemas/FalseScarcityResult"
+        confirmShaming:
+          $ref: "#/components/schemas/ConfirmShamingResult"
+        hiddenFees:
+          $ref: "#/components/schemas/HiddenFeesResult"
+        preCheckedAddOns:
+          $ref: "#/components/schemas/PreCheckedAddOnsResult"
+        misdirection:
+          $ref: "#/components/schemas/MisdirectionResult"
+        trustScore:
+          type: integer
+          description: Trust score 0-100
+        summary:
+          type: string
+          description: Human-readable summary of findings
+      required:
+        - domain
+        - falseUrgency
+        - falseScarcity
+        - confirmShaming
+        - hiddenFees
+        - preCheckedAddOns
+        - misdirection
+        - trustScore
+        - summary
+
+    FalseUrgencyResult:
+      type: object
+      properties:
+        detected:
+          type: boolean
+        evidence:
+          type: string
+        isTimerFake:
+          type: ["boolean", "null"]
+      required:
+        - detected
+        - evidence
+
+    FalseScarcityResult:
+      type: object
+      properties:
+        detected:
+          type: boolean
+        evidence:
+          type: string
+      required:
+        - detected
+        - evidence
+
+    ConfirmShamingResult:
+      type: object
+      properties:
+        detected:
+          type: boolean
+        shamingText:
+          type: string
+        rewrittenText:
+          type: string
+      required:
+        - detected
+        - shamingText
+        - rewrittenText
+
+    HiddenFeesResult:
+      type: object
+      properties:
+        detected:
+          type: boolean
+        feeItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeeItem"
+        totalExtra:
+          type: ["number", "null"]
+      required:
+        - detected
+        - feeItems
+
+    FeeItem:
+      type: object
+      properties:
+        label:
+          type: string
+        amount:
+          type: number
+      required:
+        - label
+        - amount
+
+    PreCheckedAddOnsResult:
+      type: object
+      properties:
+        detected:
+          type: boolean
+        fieldIds:
+          type: array
+          items:
+            type: string
+        addOnLabels:
+          type: array
+          items:
+            type: string
+      required:
+        - detected
+        - fieldIds
+        - addOnLabels
+
+    MisdirectionResult:
+      type: object
+      properties:
+        detected:
+          type: boolean
+        hiddenDeclineText:
+          type: string
+      required:
+        - detected
+        - hiddenDeclineText
+
+    ClassifyUpsellBody:
+      type: object
+      properties:
+        domain:
+          type: string
+        pageText:
+          type: string
+          description: Text content of the upsell page
+      required:
+        - domain
+        - pageText
+
+    UpsellClassification:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - insurance
+            - breakfast
+            - room_upgrade
+            - seat_selection
+            - newsletter
+            - sms_alerts
+            - warranty
+            - refundable_rate
+            - other
+        confidence:
+          type: number
+        recommendedAction:
+          type: string
+          description: "Suggested action: decline, accept, or ask_user"
+        declineButtonHint:
+          type: string
+          description: Text or selector hint for the decline button
+      required:
+        - type
+        - confidence
+        - recommendedAction
+        - declineButtonHint
+
+    TrustRating:
+      type: object
+      properties:
+        id:
+          type: integer
+        domain:
+          type: string
+        score:
+          type: integer
+          description: Trust score 0-100
+        tier:
+          type: string
+          enum: [gold, clean, neutral, suspicious, high_manipulation]
+        totalScans:
+          type: integer
+        patternsDetectedCount:
+          type: integer
+        hiddenFeesCount:
+          type: integer
+        lastScannedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - domain
+        - score
+        - tier
+        - totalScans
+        - patternsDetectedCount
+        - hiddenFeesCount
+        - createdAt
+        - updatedAt
+
+    UpsertTrustRatingBody:
+      type: object
+      properties:
+        scoreDelta:
+          type: integer
+          description: Amount to adjust the score (positive or negative)
+        patternsFound:
+          type: integer
+        hiddenFeesFound:
+          type: integer
+      required:
+        - scoreDelta
+        - patternsFound
+        - hiddenFeesFound
+
+    DetectionReport:
+      type: object
+      properties:
+        id:
+          type: integer
+        domain:
+          type: string
+        url:
+          type: string
+        trustScore:
+          type: integer
+        falseUrgencyDetected:
+          type: boolean
+        falseScarcityDetected:
+          type: boolean
+        confirmShamingDetected:
+          type: boolean
+        hiddenFeesDetected:
+          type: boolean
+        preCheckedAddOnsDetected:
+          type: boolean
+        misdirectionDetected:
+          type: boolean
+        totalPatternsDetected:
+          type: integer
+        hiddenFeesTotal:
+          type: ["number", "null"]
+        summary:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - domain
+        - url
+        - trustScore
+        - falseUrgencyDetected
+        - falseScarcityDetected
+        - confirmShamingDetected
+        - hiddenFeesDetected
+        - preCheckedAddOnsDetected
+        - misdirectionDetected
+        - totalPatternsDetected
+        - summary
+        - createdAt
+
+    CreateReportBody:
+      type: object
+      properties:
+        domain:
+          type: string
+        url:
+          type: string
+        trustScore:
+          type: integer
+        falseUrgencyDetected:
+          type: boolean
+        falseScarcityDetected:
+          type: boolean
+        confirmShamingDetected:
+          type: boolean
+        hiddenFeesDetected:
+          type: boolean
+        preCheckedAddOnsDetected:
+          type: boolean
+        misdirectionDetected:
+          type: boolean
+        totalPatternsDetected:
+          type: integer
+        hiddenFeesTotal:
+          type: ["number", "null"]
+        summary:
+          type: string
+      required:
+        - domain
+        - url
+        - trustScore
+        - falseUrgencyDetected
+        - falseScarcityDetected
+        - confirmShamingDetected
+        - hiddenFeesDetected
+        - preCheckedAddOnsDetected
+        - misdirectionDetected
+        - totalPatternsDetected
+        - summary
+
+    StatsSummary:
+      type: object
+      properties:
+        totalScans:
+          type: integer
+        totalPatternsDetected:
+          type: integer
+        totalHiddenFeesBlocked:
+          type: number
+          description: Estimated total money saved in dollars
+        totalDomainsTracked:
+          type: integer
+        totalReportsLast30Days:
+          type: integer
+        avgTrustScore:
+          type: number
+        goldTierDomains:
+          type: integer
+        highManipulationDomains:
+          type: integer
+      required:
+        - totalScans
+        - totalPatternsDetected
+        - totalHiddenFeesBlocked
+        - totalDomainsTracked
+        - totalReportsLast30Days
+        - avgTrustScore
+        - goldTierDomains
+        - highManipulationDomains
+
+    PatternBreakdown:
+      type: object
+      properties:
+        falseUrgency:
+          type: integer
+        falseScarcity:
+          type: integer
+        confirmShaming:
+          type: integer
+        hiddenFees:
+          type: integer
+        preCheckedAddOns:
+          type: integer
+        misdirection:
+          type: integer
+      required:
+        - falseUrgency
+        - falseScarcity
+        - confirmShaming
+        - hiddenFees
+        - preCheckedAddOns
+        - misdirection
+
+    DomainOffenderSummary:
+      type: object
+      properties:
+        domain:
+          type: string
+        totalPatternsDetected:
+          type: integer
+        trustScore:
+          type: integer
+        tier:
+          type: string
+        totalScans:
+          type: integer
+      required:
+        - domain
+        - totalPatternsDetected
+        - trustScore
+        - tier
+        - totalScans

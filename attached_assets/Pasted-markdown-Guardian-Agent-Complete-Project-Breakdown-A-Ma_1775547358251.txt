@@ -1,0 +1,366 @@
+markdown# Guardian Agent — Complete Project Breakdown
+## "A Manipulation Blocker for the Modern Web"
+
+---
+
+## 1. THE CORE IDEA
+
+### What Problem Are We Solving?
+Every time a person shops online, they are being psychologically manipulated by techniques collectively known as "Dark Patterns." These are intentional UX/UI tricks designed by companies to make users spend more money, buy things they don't need, or agree to terms they wouldn't consciously choose.
+
+We have Ad Blockers that strip out advertisements. We do NOT have anything that strips out manipulation. Guardian Agent is that tool.
+
+### The One-Line Mission
+Give every online shopper the true final price BEFORE they start checkout, neutralize every psychological manipulation trick along the way, and fast-forward them through the upsell gauntlet automatically.
+
+### Why This Matters
+- The average person pays $20–$50/month in hidden fees and impulse upsells they didn't intend to buy
+- Dark patterns are estimated to extract billions of dollars per year from consumers globally
+- The "sunk cost" effect means by the time you see the real price (after 10 minutes of form-filling), you're too exhausted to start over
+- FOMO manufactured by fake timers and fake stock alerts causes anxiety and rushed decisions
+- Tools like Honey (a coupon finder) are funded by the same retailers they claim to fight — a fundamental conflict of interest. Guardian is funded by users, so it fights for users.
+
+---
+
+## 2. WHAT ARE DARK PATTERNS (The Enemy)
+
+### 2A. False Urgency
+**What it is:** Countdown timers, "Deal expires soon!" banners, "Offer ends in 05:00" clocks.
+**The truth:** Most of these timers reset when you refresh the page or are just CSS animations with no real deadline.
+**How Guardian fights it:** Re-fetches the page from a clean session and compares the timer value. If it hasn't counted down correctly, it's flagged as fake and the timer gets a "⚠ Unverified" overlay.
+
+### 2B. False Scarcity
+**What it is:** "Only 1 left in stock!", "42 people viewing this right now!", "Last room at this price!"
+**The truth:** The "42 people viewing" figure is almost always a randomly generated JavaScript animation. The "1 left" message is often a generic trigger that fires below a threshold, not a real-time inventory count.
+**How Guardian fights it:** Opens the same product page from three different virtual sessions. If 5 rooms show available across sessions, "only 1 left" is flagged as false.
+
+### 2C. Hidden Fees (The Drip)
+**What it is:** A hotel lists for $165/night. By the final checkout screen: +$22 tax, +$15 "Sustainability Fee," +$10 "City Resort Fee" = $212. You only see this after 10 minutes of form-filling.
+**The truth:** These fees are mandatory and always existed. They were deliberately hidden from the listing price to make the room appear cheaper in search results.
+**How Guardian fights it:** Runs a "Ghost Checkout" — silently completes the entire checkout flow in a hidden browser tab using the user's stored profile, then surfaces the complete fee breakdown BEFORE the user even types their name.
+
+### 2D. Confirm-Shaming
+**What it is:** The "No" button on an upsell that reads "No, I hate saving money" or "No, I don't care about my family's safety."
+**The truth:** This is emotional manipulation through language. It's designed to make users feel guilty for declining.
+**How Guardian fights it:** Detects these phrases using LLM text classification and rewrites them to neutral language: "No thanks."
+
+### 2E. Pre-Checked Boxes (Forced Opt-In)
+**What it is:** Travel insurance, newsletter subscriptions, SMS alerts, or add-on products that come pre-selected. Users have to actively uncheck them.
+**The truth:** Studies show the majority of users never uncheck these because they either don't notice or assume they're mandatory.
+**How Guardian fights it:** Scans all form fields at checkout, detects pre-checked optional items, and automatically unchecks them based on user preferences.
+
+### 2F. Misdirection / Roach Motel
+**What it is:** The "Subscribe" button is large, colorful, and centered. The "No thanks" option is in tiny gray font, hidden below the fold, or styled as a non-clickable piece of text.
+**The truth:** Visual hierarchy is being deliberately weaponized to hide exits.
+**How Guardian fights it:** Uses a Vision-Language Model (VLM) to screenshot the page and identify visual imbalance — surfacing hidden decline options as prominent buttons in the Guardian overlay.
+
+---
+
+## 3. HOW THE PRODUCT WORKS — FULL USER JOURNEY
+
+### The Setup (One Time)
+1. User installs Guardian as a Chrome browser extension
+2. User opens Guardian settings and fills in a profile:
+   - Name, email alias (not real email), address (for auto-fill only, stored locally encrypted)
+   - Preferences: "Always prefer refundable rates," "Skip breakfast add-ons," "Skip insurance," "Skip seat upgrades"
+   - Budget alerts: "Warn me if total exceeds my stated price by more than 15%"
+3. That's it. Guardian works silently in the background from now on.
+
+### The Live Journey (Every Checkout)
+
+**Step 1 — Detection (0–2 seconds after landing)**
+- User lands on a product/hotel/flight listing page
+- Guardian's DOM Observer immediately begins scanning the page
+- It extracts: all price strings, timer elements, stock alert text, form fields, button labels
+- This data is sent to the Guardian Detection Engine
+- The LLM classifier returns a structured report: which dark patterns are present, what the evidence is, what the verdict is
+- Guardian overlays small colored flags on detected elements instantly
+
+**Step 2 — Ghost Checkout (runs in background, 5–15 seconds)**
+- Simultaneously, Guardian opens a hidden browser tab
+- It navigates the entire checkout flow using the user's stored profile to auto-fill forms
+- It records every fee that appears at each step
+- It assembles the TRUE TOTAL price breakdown
+- Before the user has finished reading the product listing, Guardian's header bar already shows: "True Total: $212.40 (Base $165 + Tax $22 + Resort Fee $10 + Sustainability Fee $15.40)"
+
+**Step 3 — The Gauntlet (as user proceeds through checkout)**
+- User clicks "Reserve" or "Add to Cart"
+- Upsell Page 1 appears: "Add breakfast for $30?" — Guardian auto-clicks "No thanks" (per preference) and the page flies past like fast-forward
+- Upsell Page 2 appears: "Non-refundable vs Refundable?" — Guardian auto-selects "Refundable" (per preference)
+- Upsell Page 3 appears: Pre-checked travel insurance — Guardian auto-unchecks it
+- The user watches the pages skip past, never having to read a guilt-trip
+
+**Step 4 — Final Review (Guardian Seal)**
+- User reaches the final "Pay Now" page
+- Guardian does one last scan: verifies the total matches what it predicted, checks if any new fees appeared, re-reads the cancellation policy and compares it to what was advertised on the listing
+- If everything checks out: a green "Guardian Seal" badge appears over the Pay button: "Price verified. No new fees. Cancellation policy matches listing. Safe to buy."
+- If something changed: a red warning appears: "⚠ A new $8 'processing fee' appeared that was not on the listing page."
+
+**Step 5 — Post-Purchase (Trust Rating)**
+- Guardian records whether this retailer played fair
+- Over time it builds a Trust Rating per domain
+- Clean sites (no hidden fees, no dark patterns, honest pricing) get a "Gold Trust" badge
+- Repeat offenders get a "High Manipulation" warning shown the next time the user visits
+
+---
+
+## 4. THE FULL SYSTEM ARCHITECTURE
+
+### Layer 1 — Browser Extension (Chrome, Manifest V3)
+This is the core of the product. Runs entirely in the user's browser. No data is sent to any external server (except the LLM API call for classification, which uses anonymized page text — no PII).
+
+**Components:**
+- **Content Script (observer.ts):** Injected into every tab. Watches for DOM mutations. Triggers the pipeline whenever the page changes.
+- **Background Service Worker (background.ts):** Coordinates everything. Receives events from content script, calls the LLM API, manages the ghost checkout tab, sends results back to the overlay UI.
+- **Content UI (GuardianHeader.tsx):** A React component injected at the top of the page. Renders the True Price Header, flags, and Guardian Seal. Uses Plasmo's Content UI system.
+- **Options Page (options.tsx):** Where users set their profile and preferences.
+- **Storage (chrome.storage.local):** Stores the encrypted user profile, preferences, and site trust ratings.
+
+### Layer 2 — Detection Engine
+**Input:** Raw page state (text content, timer elements, stock alerts, form fields, button labels)
+**Process:** LLM classification via Claude API
+**Output:** Structured DarkPatternReport JSON
+DarkPatternReport {
+falseUrgency: { detected: bool, evidence: string, isTimerFake: bool }
+falseScarcity: { detected: bool, evidence: string }
+confirmShaming: { detected: bool, shamingText: string, elementSelector: string }
+hiddenFees: { detected: bool, feeItems: [{label, amount}] }
+preCheckedAddOns: { detected: bool, fieldIds: string[] }
+misdirection: { detected: bool, hiddenDeclineSelector: string }
+trustScore: number (0–100)
+}
+
+### Layer 3 — Ghost Checkout Engine
+**Purpose:** Find the true final price without the user spending any time
+**How it works:**
+1. Opens a new Chrome tab (invisible, not focused)
+2. Navigates to the product page
+3. Uses the user's stored profile to auto-fill all required fields (name, email alias, address, payment info — fake card or stops before payment)
+4. At each step, records all prices and fees that appear
+5. Stops at the final review page (does NOT click Pay)
+6. Returns the complete PriceBreakdown object
+7. Closes the hidden tab
+
+**Edge cases:**
+- If the site blocks bot-like navigation: fall back to DOM price extraction on the visible page only
+- If the site requires a real login: skip ghost checkout, display "Log in to see full fees" prompt
+- If the checkout is too long: set a 30-second timeout, return partial data with a warning
+
+### Layer 4 — Action Layer
+**CSS Injector:** Modifies the visual appearance of dark pattern elements in real-time
+- Fake timers get a "⚠ Unverified countdown" label
+- Confirm-shaming button text gets rewritten to "No thanks"
+- Pre-checked boxes get unchecked automatically
+- Hidden "decline" links get restyled to be visible
+
+**Auto-Navigator:** Clicks through upsell pages automatically
+- Detects which type of upsell page is showing (LLM classification of page text)
+- Looks up the user's preference for that upsell type
+- Finds and clicks the appropriate button/link
+- Logs what was skipped and how much was saved
+
+### Layer 5 — Overlay UI
+Everything the user sees from Guardian. Designed to be non-intrusive but always present during checkout.
+
+**True Price Header Bar:**
+- Fixed bar at top of browser during checkout
+- Shows: Guardian logo | True Total: $XXX.XX | itemized fees | any active flags
+- Color: dark/neutral so it doesn't blend with site branding
+- Disappears when user leaves a checkout flow
+
+**Flag Tooltips:**
+- Small colored badges injected next to dark pattern elements inline on the page
+- Purple = false urgency/scarcity claim
+- Orange = confirm shaming detected
+- Red = new fee not shown at listing
+
+**Guardian Seal:**
+- Appears over the final Pay button when all checks pass
+- Green = verified, safe to proceed
+- Red = warning, a discrepancy was found
+
+**Settings Panel:**
+- Accessible via the Guardian extension icon in the toolbar
+- Shows: current page trust score, list of detected patterns, user preferences, trust history for this site
+
+---
+
+## 5. THE TECHNOLOGY STACK
+
+### Frontend / Extension
+- **Framework:** Plasmo (purpose-built Chrome extension framework, supports React + TypeScript natively)
+- **Language:** TypeScript throughout
+- **UI:** React for the overlay components, Tailwind CSS for styling
+- **Extension Type:** Chrome Manifest V3 (required for modern Chrome extensions)
+
+### AI / Intelligence
+- **LLM:** Claude claude-sonnet-4-20250514 via Anthropic API
+  - Used for: dark pattern classification from text, upsell page type detection, T&C scanning, confirm-shaming detection
+  - NOT used for: anything that involves sending personal user data (profile, payment info)
+- **VLM (Vision):** Claude's vision capability on page screenshots
+  - Used for: detecting visually hidden decline buttons that aren't findable via DOM text alone
+  - Screenshot is taken locally, sent as base64 image in the API call
+
+### Data Storage
+- **chrome.storage.local:** User profile (encrypted with a user-set PIN), preferences, site trust ratings
+- **No external database:** Zero data leaves the device except anonymized page text for LLM classification
+- **No account required:** Guardian works without signup. Profile is local-only.
+
+### Ghost Checkout
+- **Chrome Tabs API:** Opens hidden tabs for ghost checkout navigation
+- **Chrome Scripting API:** Injects auto-fill scripts into the hidden checkout tab
+- **Fallback:** If ghost checkout is blocked, fall back to DOM scraping of the visible page
+
+### Demo Site
+- **Plain HTML/CSS/JS:** A fake "CheatFlights" or "SketchyHotels" booking site built with intentional dark patterns
+- **Baked-in manipulations:** fake countdown timer (CSS animation, resets on reload), fake "42 people viewing" (Math.random()), pre-checked insurance box, confirm-shaming decline link, fee reveal only at final step
+- **Purpose:** Judges can see Guardian in action without needing to use a real e-commerce site
+
+---
+
+## 6. THE DEMO SITE — DESIGN SPEC
+
+### What It Is
+A fake travel booking website called "QuickFly" or "DealNest" — looks like a real booking site but is rigged with every dark pattern we detect. Built purely for the hackathon demo so judges can see Guardian's effects dramatically and immediately.
+
+### Visual Design
+- Looks real: logo, search bar, hotel cards with photos (placeholder images), rating stars, map thumbnails
+- Uses colors and layout similar to Booking.com or Expedia (familiar to judges)
+- Mobile-responsive so it works on any screen
+
+### The Rigged Flow
+
+**Page 1 — Search Results**
+- Hotel listed at $165/night
+- "Only 1 room left at this price!" (hardcoded, always shows regardless of actual "inventory")
+- "38 people looking right now" (JavaScript: Math.floor(Math.random() * 20) + 30, updates every 4 seconds)
+- Countdown timer "Deal expires in 08:42" (CSS animation counting down, resets on page refresh)
+
+**Page 2 — Hotel Detail**
+- Larger photos, amenities list
+- Price still shows $165
+- "Non-refundable rate — Save $5!" (default selected, pushes users toward non-refundable)
+- Small print: "Taxes and fees not included" (buried in footnote, 10px gray text)
+
+**Page 3 — Enter Details**
+- Form fields: name, email, phone
+- Pre-checked: "Add travel insurance (+$22)" checkbox
+- Pre-checked: "Subscribe to DealNest newsletter" checkbox
+- Decline link for insurance styled as: "No, I don't want to protect my trip" (tiny, gray, no underline)
+
+**Page 4 — Final Review**
+- Price breakdown FINALLY revealed:
+  - Room: $165.00
+  - Tax (13%): $21.45
+  - City Resort Fee: $10.00
+  - Sustainability Contribution: $15.40
+  - Booking Processing Fee: $4.99
+  - **Total: $216.84**
+- "Pay Now" button (large, green)
+- No easy way to go back and reconsider
+
+### Guardian Effect on Demo Site
+- **On Page 1:** Timer gets flagged as fake (purple badge), scarcity claim gets flagged, True Price header shows $216.84 immediately
+- **On Page 2:** Refundable option gets auto-selected per user preference
+- **On Page 3:** Both pre-checked boxes get automatically unchecked, confirm-shaming text gets rewritten to "No thanks"
+- **On Page 4:** Guardian Seal appears — "Price verified. Matches predicted total. Cancellation policy confirmed. Safe to buy."
+
+---
+
+## 7. THE BUSINESS MODEL
+
+### Why Most Similar Tools Failed
+- Honey: Makes money via retailer commissions. Retailers pay Honey to be featured. Honey therefore cannot truly fight retailers — it's on their payroll.
+- Browser coupons: Same problem. Their incentives are misaligned with the user.
+- Price comparison sites: Funded by the same hotels/airlines they're ranking.
+
+### Guardian's Model
+**User-funded subscription utility.** Like a VPN or a premium antivirus. Users pay a small monthly fee (~$4–$8/month) because they trust that Guardian is fighting FOR them, not for the retailer.
+
+**Why users will pay:**
+- Average hidden fee savings: $20–$50/month (10x return on subscription cost)
+- Time savings: 10–13 minutes per checkout session saved
+- Emotional value: removal of manufactured anxiety, FOMO, and guilt
+
+**What Guardian will NEVER do:**
+- Accept money from retailers
+- Promote certain retailers over others
+- Sell user browsing data
+- Require a server-side account to function
+
+---
+
+## 8. PRIVACY AND SECURITY DESIGN
+
+### On-Device First
+- User profile (name, address, email alias) is stored ONLY in chrome.storage.local
+- It is encrypted with a user-set PIN at rest
+- It is NEVER transmitted to any Guardian server
+- It is only used by the Ghost Checkout script running inside the user's own browser
+
+### What IS Sent to the API
+- Anonymized page text (no URLs containing personal info, no form field values)
+- Base64 screenshot of the visible page (no user account data visible in screenshots)
+- No cookies, no session tokens, no personal identifiers
+
+### What Is NEVER Sent to the API
+- User's name, email, address, or payment information
+- The URL of the page (to prevent retailer fingerprinting)
+- Any data that could identify the specific user
+
+### Ghost Checkout Privacy
+- The hidden checkout tab uses an email alias (e.g., a Simplelogin or Apple Hide My Email address)
+- It stops BEFORE submitting any payment
+- No real transaction is ever initiated
+- The tab is destroyed immediately after price extraction
+
+---
+
+## 9. THE AIM — WHAT SUCCESS LOOKS LIKE
+
+### For the Hackathon
+- Working Chrome extension that installs in one click
+- Live demo on the rigged demo site showing all 4 stages: detection, ghost checkout price reveal, auto-navigation, Guardian seal
+- Clear before/after: "Without Guardian: 15 minutes, paid $216.84 and didn't know until the end. With Guardian: 2 minutes, knew the price immediately, skipped 3 upsell pages automatically."
+
+### For the Product (Post-Hackathon)
+- Phase 1: Travel vertical (flights, hotels) — highest manipulation density, most dramatic savings
+- Phase 2: Fashion/apparel (fast fashion sites with fake limited-time offers)
+- Phase 3: SaaS subscriptions (hidden annual billing, pre-checked add-ons)
+- Phase 4: General e-commerce (Amazon, grocery delivery)
+
+### The Bigger Vision
+A world where every online purchase is made with full information, no manufactured anxiety, and no psychological manipulation. Guardian is not anti-commerce — it's pro-honest-commerce. Sites that price transparently and treat customers fairly get promoted with Gold Trust badges. The tool creates a market incentive for retailers to be honest: if Guardian flags you as a manipulator, your customers will see it.
+
+---
+
+## 10. WHAT ANY AGENT BUILDING THIS NEEDS TO KNOW
+
+### The Non-Negotiables
+1. Ghost checkout MUST run before the user begins typing — the price reveal is the killer feature
+2. All user PII stays on-device, always, no exceptions
+3. The LLM classification must be fast (under 3 seconds) or it feels broken
+4. The overlay UI must not break the shopping site's layout — it sits ABOVE the page, not inside it
+5. Auto-navigation must respect user preferences — it should never decline something the user wanted
+
+### The Hardest Technical Problems
+1. **Ghost checkout detection:** Some sites use bot detection (Cloudflare, DataDome) that will block a headless checkout. Mitigation: use a real browser tab (not headless), add human-like delays, have a graceful fallback to DOM price scraping.
+2. **Timer validation:** Fetching the same page from a different session to compare timer values requires making a server-side request (since a browser fetch reuses session). Mitigation: call a lightweight backend endpoint that fetches the URL from a clean IP and returns the timer value.
+3. **Upsell page classification:** Every site has different upsell page layouts. Mitigation: use LLM vision on a screenshot rather than DOM selectors, so layout-agnostic classification works across all sites.
+4. **MV3 Service Worker limitations:** Chrome MV3 service workers don't persist. Long-running ghost checkout flows may get killed. Mitigation: use chrome.alarms API to keep the worker alive, or move ghost checkout logic into an offscreen document.
+
+### The Vertical to Demo (Travel — Why It's the Right Choice)
+- Hotels and airlines have the most dramatic gap between advertised and final price
+- The manipulation tactics are well-known and recognizable to any judge
+- The time savings are most visible (checkout flows are long in travel)
+- The emotional stakes are high (vacation purchases feel personal)
+- The savings are concrete ($50+ per booking hidden in fees)
+
+### Definition of Done (MVP)
+- [ ] Extension installs without errors
+- [ ] Demo site loads with all dark patterns active
+- [ ] Guardian detects false urgency timer within 2 seconds
+- [ ] Ghost checkout returns true price before user types name
+- [ ] Auto-navigator skips at least 2 upsell pages per the user's preferences
+- [ ] Guardian Seal appears correctly on the final page
+- [ ] All of the above works in a live demo without crashing
