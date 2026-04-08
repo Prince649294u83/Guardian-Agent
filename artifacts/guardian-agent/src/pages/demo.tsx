@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useDemoScan } from "@workspace/api-client-react";
+import { AiCopilotCard } from "@/components/ai-copilot-card";
 import {
   Shield,
   ShieldAlert,
@@ -21,6 +22,7 @@ import {
   ChevronRight,
   Zap,
   AlertTriangle,
+  Brain,
 } from "lucide-react";
 
 const SCENARIOS = [
@@ -156,6 +158,89 @@ const PATTERN_CONFIG: Record<PatternKey, { label: string; icon: React.ElementTyp
   misdirection: { label: "Misdirection", icon: EyeOff, color: "text-pink-400", bgColor: "bg-pink-500/10 border-pink-500/20" },
 };
 
+function buildReasoningCards(report: any, patternsDetected: PatternKey[]) {
+  if (!report) return [];
+
+  if (patternsDetected.length === 0) {
+    return [
+      {
+        title: "Clean outcome",
+        confidence: "high",
+        quote: "No dark-pattern signals detected in the submitted checkout text.",
+        detail:
+          "Guardian did not find the usual dark-pattern signals here: fake urgency, deceptive scarcity, hidden fees, pre-selected extras, or shaming decline copy.",
+        fix: "Keep showing the full price upfront, use neutral button copy, and leave optional extras unchecked by default.",
+      },
+    ];
+  }
+
+  return patternsDetected.map((key) => {
+    const config = PATTERN_CONFIG[key];
+    const result = report[key];
+    const hasRichEvidence =
+      Boolean(result?.evidence) ||
+      Boolean(result?.shamingText) ||
+      Boolean(result?.hiddenDeclineText) ||
+      Boolean(result?.feeItems?.length) ||
+      Boolean(result?.addOnLabels?.length);
+    const confidence = hasRichEvidence ? "high" : "medium";
+
+    if (key === "hiddenFees" && result?.feeItems?.length) {
+      const labels = result.feeItems.map((fee: any) => `${fee.label} (+$${fee.amount.toFixed(2)})`).join(", ");
+      return {
+        title: config.label,
+        confidence,
+        quote: labels,
+        detail: `Guardian found extra charges outside the headline price: ${labels}.`,
+        fix: "Show mandatory fees in the first price quote and keep them visible through the full checkout flow.",
+      };
+    }
+
+    if (key === "confirmShaming" && result?.shamingText) {
+      return {
+        title: config.label,
+        confidence,
+        quote: result.shamingText,
+        detail: `Guardian flagged manipulative decline language: "${result.shamingText}".`,
+        fix: 'Replace guilt-inducing language with a neutral alternative such as "No thanks".',
+      };
+    }
+
+    if (key === "preCheckedAddOns" && result?.addOnLabels?.length) {
+      return {
+        title: config.label,
+        confidence,
+        quote: result.addOnLabels.join(", "),
+        detail: `Guardian detected optional extras already selected for the user: ${result.addOnLabels.join(", ")}.`,
+        fix: "Default optional add-ons to unchecked and ask for explicit opt-in.",
+      };
+    }
+
+    if (key === "misdirection" && result?.hiddenDeclineText) {
+      return {
+        title: config.label,
+        confidence,
+        quote: result.hiddenDeclineText,
+        detail: `Guardian found a visually de-emphasized decline path: ${result.hiddenDeclineText}`,
+        fix: "Give accept and decline actions equal prominence, contrast, and placement.",
+      };
+    }
+
+    return {
+      title: config.label,
+      confidence,
+      quote: result?.evidence || "Matched language and layout cues in the checkout text.",
+      detail: result?.evidence || "Guardian matched concrete checkout text to this dark-pattern category.",
+      fix:
+        key === "falseUrgency"
+          ? "Remove fake timers unless the offer truly expires for the current shopper."
+          : key === "falseScarcity"
+            ? "Use inventory messaging only when it reflects real, current availability."
+            : "Simplify the flow so the safer or cheaper option is easy to see and choose.",
+    };
+  });
+}
+
 export default function Demo() {
   const [selectedScenario, setSelectedScenario] = useState<typeof SCENARIOS[number] | null>(null);
   const [customDomain, setCustomDomain] = useState("example.com");
@@ -203,11 +288,13 @@ export default function Demo() {
   const report = scanResult?.darkPatternReport;
   const savedReport = scanResult?.report;
   const trustRating = scanResult?.trustRating;
+  const aiCopilot = scanResult?.aiCopilot;
   const patternsDetected = report
     ? (["falseUrgency", "falseScarcity", "confirmShaming", "hiddenFees", "preCheckedAddOns", "misdirection"] as PatternKey[]).filter(
         (k) => report[k]?.detected
       )
     : [];
+  const reasoningCards = buildReasoningCards(report, patternsDetected);
 
   const trustColor =
     trustRating?.tier === "gold" || trustRating?.tier === "clean"
@@ -338,6 +425,13 @@ export default function Demo() {
 
           {/* Right panel - results */}
           <div className="space-y-4">
+            {!isPending && aiCopilot && (
+              <AiCopilotCard
+                title="Guardian Thinking"
+                description="Guardian first interprets your checkout input, then turns that reasoning into the structured scan below."
+                payload={aiCopilot}
+              />
+            )}
             {isPending && (
               <Card className="border-primary/30 bg-primary/5">
                 <CardContent className="py-8 flex flex-col items-center justify-center gap-4">
@@ -482,6 +576,38 @@ export default function Demo() {
                     );
                   })}
                 </div>
+
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-primary" />
+                      Why Guardian Reached This Conclusion
+                    </CardTitle>
+                    <CardDescription>
+                      These are the specific signals in the checkout text that pushed the scan toward a dark-pattern finding.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {reasoningCards.map((reason, index) => (
+                      <div key={`${reason.title}-${index}`} className="rounded-lg border border-primary/10 bg-background/70 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm font-medium text-foreground">{reason.title}</div>
+                          <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                            {reason.confidence} confidence
+                          </Badge>
+                        </div>
+                        <div className="mt-2 rounded-md border border-border/70 bg-card/80 px-2.5 py-2">
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Quoted Signal</div>
+                          <p className="mt-1 text-xs font-mono text-foreground/90">{reason.quote}</p>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{reason.detail}</p>
+                        <p className="mt-2 text-xs text-primary/90">
+                          <span className="font-medium text-primary">What to fix:</span> {reason.fix}
+                        </p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
 
                 {savedReport && (
                   <p className="text-xs text-muted-foreground text-center">

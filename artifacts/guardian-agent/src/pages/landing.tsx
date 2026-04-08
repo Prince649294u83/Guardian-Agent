@@ -14,6 +14,7 @@ import {
   CheckSquare,
   BarChart3,
   Chrome,
+  Bot,
   Star,
   Users,
   TrendingUp,
@@ -90,13 +91,13 @@ const HOW_IT_WORKS = [
   {
     step: "02",
     title: "Guardian scans in real time",
-    description: "As you shop, Claude AI analyzes the page text, button labels, price strings, and timer elements for manipulation.",
+    description: "As you shop, Guardian profiles the site, reveals the true payable total, and compares safer alternatives before you commit.",
     icon: Zap,
   },
   {
     step: "03",
     title: "See the truth — and act on it",
-    description: "An overlay shows you the real total, uncovers hidden fees, auto-unchecks add-ons, and rewrites shaming language.",
+    description: "An overlay and mission panel strip upsells, score credibility, suggest alternatives, and stop for approval before risky actions.",
     icon: ShieldCheck,
   },
 ];
@@ -137,6 +138,7 @@ export default function Landing() {
             <span className="font-bold text-lg tracking-tight">Guardian Agent</span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
+            <Link href="/agent" className="hover:text-foreground transition-colors">Mission Control</Link>
             <Link href="/patterns" className="hover:text-foreground transition-colors">Dark Patterns</Link>
             <Link href="/trust" className="hover:text-foreground transition-colors">Trust Ratings</Link>
             <Link href="/demo" className="hover:text-foreground transition-colors">Live Demo</Link>
@@ -163,7 +165,7 @@ export default function Landing() {
             Hackathon Demo — Live AI Analysis Running
           </div>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter max-w-4xl mx-auto leading-none">
-            Stop Being <span className="text-destructive">Manipulated</span> at Checkout.
+            Let Guardian Shop Like a <span className="text-destructive">Manipulation Blocker</span>.
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Guardian Agent is a Chrome extension powered by Claude AI that detects dark patterns — fake timers, hidden fees, pre-checked add-ons — and blocks them before they cost you money.

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useDemoFeeEstimate } from "@workspace/api-client-react";
+import { AiCopilotCard } from "@/components/ai-copilot-card";
 import {
   DollarSign,
   AlertTriangle,
@@ -13,6 +14,7 @@ import {
   TrendingUp,
   Calculator,
   Info,
+  Brain,
 } from "lucide-react";
 
 const MERCHANT_TYPES = [
@@ -29,6 +31,52 @@ const KNOWN_OFFENDERS = [
   { domain: "airbnb.com", type: "vacation_rental", listed: 120, description: "Per night, weekend" },
   { domain: "enterprise.com", type: "car_rental", listed: 45, description: "Daily compact rate" },
 ];
+
+function buildFeeReasoning(result: any, merchantType: string) {
+  if (!result) return [];
+
+  const merchantLabel =
+    MERCHANT_TYPES.find((item) => item.id === merchantType)?.label ?? merchantType;
+
+  return [
+    {
+      title: "Merchant pattern baseline",
+      confidence: "medium",
+      quote: merchantLabel,
+      detail: `Guardian started from typical ${merchantLabel.toLowerCase()} checkout behavior, where mandatory fees often show up after the initial headline price.`,
+      fix: "If you control the checkout, move taxes, platform fees, and service charges into the earliest visible price summary.",
+    },
+    {
+      title: "Likely hidden cost layers",
+      confidence: result.feeBreakdown?.length > 1 ? "high" : "medium",
+      quote:
+        result.feeBreakdown?.length > 0
+          ? result.feeBreakdown.map((fee: any) => `${fee.label} (+$${fee.amount.toFixed(2)})`).join(", ")
+          : "Taxes, surcharges, and service fees",
+      detail:
+        result.feeBreakdown?.length > 0
+          ? `The estimate includes added cost categories such as ${result.feeBreakdown
+              .map((fee: any) => fee.label.toLowerCase())
+              .join(" and ")}.`
+          : "The estimate assumes extra taxes, service charges, or checkout surcharges beyond the listed price.",
+      fix: "Break out each mandatory fee line item before the shopper reaches final payment.",
+    },
+    {
+      title: "How the risk was judged",
+      confidence: "high",
+      quote: `+$${result.savingsOpportunity.toFixed(2)} vs listed price`,
+      detail: `Guardian marked this as ${result.warningLevel} risk because the modeled total is $${result.savingsOpportunity.toFixed(2)} above the advertised amount.`,
+      fix: "Flag large uplifts over the headline price and warn users before they commit more time to checkout.",
+    },
+    {
+      title: "Confidence note",
+      confidence: result.confidence,
+      quote: `${result.confidence} confidence`,
+      detail: `Confidence is ${result.confidence} because this is a category-based estimate rather than a full live checkout capture.`,
+      fix: "For a stronger estimate, capture the actual checkout steps and fee disclosures instead of relying only on merchant-type heuristics.",
+    },
+  ];
+}
 
 export default function FeeCalc() {
   const [domain, setDomain] = useState("");
@@ -81,6 +129,8 @@ export default function FeeCalc() {
   const percentageExtra = result
     ? (((result.estimatedTotal - result.listedPrice) / result.listedPrice) * 100).toFixed(0)
     : null;
+  const feeReasoning = buildFeeReasoning(result, merchantType);
+  const aiCopilot = result?.aiCopilot;
 
   return (
     <Layout>
@@ -187,6 +237,13 @@ export default function FeeCalc() {
 
           {/* Result */}
           <div className="space-y-4">
+            {!isPending && aiCopilot && (
+              <AiCopilotCard
+                title="Guardian Thinking"
+                description="Guardian reads your merchant, price, and category first, then produces the fee estimate beneath it."
+                payload={aiCopilot}
+              />
+            )}
             {isPending && (
               <Card className="border-primary/20">
                 <CardContent className="py-8 flex flex-col items-center gap-3">
@@ -267,6 +324,38 @@ export default function FeeCalc() {
                   <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                   <p className="text-xs text-muted-foreground">{result.explanation}</p>
                 </div>
+
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-primary" />
+                      Why Guardian Estimated This Total
+                    </CardTitle>
+                    <CardDescription>
+                      This box explains the reasoning behind the fee uplift instead of only showing the final number.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {feeReasoning.map((reason) => (
+                      <div key={reason.title} className="rounded-lg border border-primary/10 bg-background/70 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm font-medium text-foreground">{reason.title}</div>
+                          <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                            {reason.confidence} confidence
+                          </Badge>
+                        </div>
+                        <div className="mt-2 rounded-md border border-border/70 bg-card/80 px-2.5 py-2">
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Quoted Signal</div>
+                          <p className="mt-1 text-xs font-mono text-foreground/90">{reason.quote}</p>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{reason.detail}</p>
+                        <p className="mt-2 text-xs text-primary/90">
+                          <span className="font-medium text-primary">What to fix:</span> {reason.fix}
+                        </p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
               </div>
             )}
           </div>

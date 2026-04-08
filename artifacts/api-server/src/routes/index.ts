@@ -5,6 +5,8 @@ import trustRouter from "./trust";
 import reportsRouter from "./reports";
 import statsRouter from "./stats";
 import demoRouter from "./demo";
+import agentRouter from "./agent";
+import bookingRouter from "./booking";
 
 const router: IRouter = Router();
 
@@ -14,5 +16,7 @@ router.use(trustRouter);
 router.use(reportsRouter);
 router.use(statsRouter);
 router.use(demoRouter);
+router.use(agentRouter);
+router.use(bookingRouter);
 
 export default router;

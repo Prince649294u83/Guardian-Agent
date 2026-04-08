@@ -47,3 +47,14 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# local env and Python artifacts
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+outputs/
+
+# local build/test artifacts
+artifacts/api-server/.test-dist/

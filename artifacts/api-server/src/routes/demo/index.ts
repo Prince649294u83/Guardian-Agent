@@ -3,6 +3,14 @@ import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { db, detectionReportsTable, trustRatingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { DemoScanBody, DemoFeeEstimateBody } from "@workspace/api-zod";
+import { buildFeeCopilot } from "../../lib/ai-copilot";
+import { buildAgenticMission } from "../../lib/agentic-mission";
+import { analyzeBookingManipulation } from "../../lib/booking-manipulation";
+import { analyzeCheckoutContext } from "../../lib/checkout-analysis";
+import { buildScanArtifacts } from "../../lib/scan-pipeline";
+import { buildDetectionReportInsert } from "../../lib/scan-records";
+import { buildTrustRatingMutation, computeTrustScoreDelta, computeTrustTier } from "../../lib/trust-rating";
+import { analyzeDealIntelligence } from "../../lib/deal-intelligence";
 
 const router: IRouter = Router();
 
@@ -41,15 +49,131 @@ Base estimates on known industry practices:
 - E-commerce: typically add 0-15% for shipping, handling, taxes
 warningLevel: green if <10% extra, orange if 10-25% extra, red if >25% extra`;
 
-function computeTier(score: number): string {
-  if (score >= 85) return "gold";
-  if (score >= 65) return "clean";
-  if (score >= 45) return "neutral";
-  if (score >= 25) return "suspicious";
-  return "high_manipulation";
-}
-
 router.post("/demo/scan", async (req, res): Promise<void> => {
+  if (req.body?.isBookingPlatform === true) {
+    const rawUrl = typeof req.body?.url === "string" ? req.body.url : "https://example.com/booking";
+    let domain = "example.com";
+    try {
+      domain = new URL(rawUrl).hostname.toLowerCase();
+    } catch {
+      domain = "example.com";
+    }
+
+    const pageText = typeof req.body?.pageText === "string" ? req.body.pageText : "";
+    const bookingType = typeof req.body?.bookingType === "string" ? req.body.bookingType : "unknown";
+    const pageType = typeof req.body?.pageType === "string" ? req.body.pageType : "unknown";
+    const route =
+      req.body?.route && typeof req.body.route === "object"
+        ? {
+            from: typeof req.body.route.from === "string" ? req.body.route.from : undefined,
+            to: typeof req.body.route.to === "string" ? req.body.route.to : undefined,
+            display: typeof req.body.route.display === "string" ? req.body.route.display : undefined,
+          }
+        : null;
+    const operator = typeof req.body?.operator === "string" ? req.body.operator : null;
+    const departureTime = typeof req.body?.departureTime === "string" ? req.body.departureTime : null;
+    const departureDate = typeof req.body?.departureDate === "string" ? req.body.departureDate : null;
+    const productCandidates = Array.isArray(req.body?.productCandidates)
+      ? req.body.productCandidates
+          .filter((value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object")
+          .map((candidate: Record<string, unknown>) => ({
+            title: typeof candidate.title === "string" ? candidate.title : "",
+            listedPrice: typeof candidate.listedPrice === "number" ? candidate.listedPrice : null,
+            originalPrice: typeof candidate.originalPrice === "number" ? candidate.originalPrice : null,
+            historicalMinPrice: typeof candidate.historicalMinPrice === "number" ? candidate.historicalMinPrice : null,
+            currency: typeof candidate.currency === "string" ? candidate.currency : null,
+            url: typeof candidate.url === "string" ? candidate.url : null,
+            stockText: typeof candidate.stockText === "string" ? candidate.stockText : null,
+            urgencyText: typeof candidate.urgencyText === "string" ? candidate.urgencyText : null,
+            hasTimer: candidate.hasTimer === true,
+            timerResetsOnRefresh:
+              typeof candidate.timerResetsOnRefresh === "boolean" ? candidate.timerResetsOnRefresh : null,
+            reloadStockChanges: typeof candidate.reloadStockChanges === "boolean" ? candidate.reloadStockChanges : null,
+            crossPlatformMatch: typeof candidate.crossPlatformMatch === "boolean" ? candidate.crossPlatformMatch : null,
+            dealSignals: Array.isArray(candidate.dealSignals)
+              ? candidate.dealSignals.filter((value: unknown): value is string => typeof value === "string")
+              : [],
+          }))
+      : [];
+    const currentPrice =
+      typeof productCandidates[0]?.listedPrice === "number"
+        ? productCandidates[0].listedPrice
+        : typeof req.body?.bookingPrice?.currentPrice === "number"
+          ? req.body.bookingPrice.currentPrice
+          : null;
+
+    const bookingManipulations = analyzeBookingManipulation({
+      pageText,
+      bookingType,
+      pageType,
+      timer: req.body?.bookingTimer ?? req.body?.timer ?? null,
+      viewers: req.body?.bookingViewers ?? req.body?.viewers ?? null,
+      seats: req.body?.bookingSeats ?? req.body?.seats ?? null,
+      price: req.body?.bookingPrice ?? req.body?.price ?? null,
+    });
+
+    const checkoutAnalysis = analyzeCheckoutContext({
+      domain,
+      url: rawUrl,
+      pageText,
+      timerElements:
+        typeof req.body?.bookingTimer?.timerText === "string" ? [req.body.bookingTimer.timerText] : undefined,
+      stockAlerts:
+        typeof req.body?.bookingSeats?.text === "string"
+          ? [req.body.bookingSeats.text]
+          : typeof req.body?.seats?.text === "string"
+            ? [req.body.seats.text]
+            : undefined,
+      priceStrings: typeof currentPrice === "number" ? [`${currentPrice}`] : undefined,
+      productCandidates,
+    });
+
+    const mission = buildAgenticMission({
+      domain,
+      url: rawUrl,
+      pageType,
+      bookingType,
+      isBookingPlatform: true,
+      route,
+      purchaseGoal: `Verify whether this ${bookingType} booking is trustworthy and compare safer alternatives.`,
+      listedPrice: currentPrice ?? undefined,
+      pageText,
+      productCandidates,
+      compareAcrossSites: true,
+    });
+
+    const hasCritical = bookingManipulations.some((entry) => entry.severity === "critical");
+    const hasFake = bookingManipulations.some((entry) => entry.reality === "FAKE");
+    if (hasCritical || (hasFake && mission.recommendation === "proceed")) {
+      mission.recommendation = hasCritical ? "switch" : "proceed_with_caution";
+      mission.summary = hasCritical
+        ? "Critical booking manipulation was detected. Compare alternatives before continuing."
+        : "Fake booking pressure tactics were detected. Proceed only with awareness.";
+    }
+
+    const bookingContext = {
+      type: bookingType,
+      route,
+      operator,
+      price: currentPrice,
+      currency: typeof productCandidates[0]?.currency === "string" ? productCandidates[0].currency : "INR",
+      departureDate,
+      departureTime,
+      seatType: typeof req.body?.seatType === "string" ? req.body.seatType : null,
+    };
+
+    res.json({
+      mode: "booking",
+      checkoutAnalysis,
+      mission,
+      bookingManipulations,
+      bookingContext,
+      summary: mission.summary,
+      trustScore: checkoutAnalysis.trustScore,
+    });
+    return;
+  }
+
   const parsed = DemoScanBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -57,6 +181,118 @@ router.post("/demo/scan", async (req, res): Promise<void> => {
   }
 
   const { domain, url, pageText, timerElements, stockAlerts, buttonLabels, priceStrings } = parsed.data;
+  const variantUrgency = Array.isArray(req.body?.variantUrgency)
+    ? req.body.variantUrgency.filter((value: unknown): value is string => typeof value === "string")
+    : undefined;
+  const pageType = typeof req.body?.pageType === "string" ? req.body.pageType : undefined;
+  const hasTimer = req.body?.hasTimer === true;
+  const timerResetsOnRefresh = typeof req.body?.timerResetsOnRefresh === "boolean" ? req.body.timerResetsOnRefresh : undefined;
+  const reloadStockChanges = typeof req.body?.reloadStockChanges === "boolean" ? req.body.reloadStockChanges : undefined;
+  const productCandidates = Array.isArray(req.body?.productCandidates)
+    ? req.body.productCandidates
+        .filter((value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object")
+        .map((candidate: Record<string, unknown>) => ({
+          title: typeof candidate.title === "string" ? candidate.title : "",
+          listedPrice: typeof candidate.listedPrice === "number" ? candidate.listedPrice : null,
+          originalPrice: typeof candidate.originalPrice === "number" ? candidate.originalPrice : null,
+          historicalMinPrice: typeof candidate.historicalMinPrice === "number" ? candidate.historicalMinPrice : null,
+          currency: typeof candidate.currency === "string" ? candidate.currency : null,
+          url: typeof candidate.url === "string" ? candidate.url : null,
+          stockText: typeof candidate.stockText === "string" ? candidate.stockText : null,
+          urgencyText: typeof candidate.urgencyText === "string" ? candidate.urgencyText : null,
+          hasTimer: candidate.hasTimer === true,
+          timerResetsOnRefresh:
+            typeof candidate.timerResetsOnRefresh === "boolean" ? candidate.timerResetsOnRefresh : null,
+          reloadStockChanges: typeof candidate.reloadStockChanges === "boolean" ? candidate.reloadStockChanges : null,
+          crossPlatformMatch: typeof candidate.crossPlatformMatch === "boolean" ? candidate.crossPlatformMatch : null,
+          dealSignals: Array.isArray(candidate.dealSignals)
+            ? candidate.dealSignals.filter((value: unknown): value is string => typeof value === "string")
+            : [],
+          historySnapshot:
+            candidate.historySnapshot && typeof candidate.historySnapshot === "object"
+              ? (() => {
+                  const historySnapshot = candidate.historySnapshot as Record<string, unknown>;
+                  return {
+                    observations:
+                      typeof historySnapshot.observations === "number"
+                        ? historySnapshot.observations
+                        : 0,
+                    scarcityClaimRate:
+                      typeof historySnapshot.scarcityClaimRate === "number"
+                        ? historySnapshot.scarcityClaimRate
+                        : 0,
+                    uniquePricePoints:
+                      typeof historySnapshot.uniquePricePoints === "number"
+                        ? historySnapshot.uniquePricePoints
+                        : 0,
+                    lastSeenAt:
+                      typeof historySnapshot.lastSeenAt === "string"
+                        ? historySnapshot.lastSeenAt
+                        : null,
+                  };
+                })()
+              : null,
+        }))
+    : undefined;
+  const dealIntelligence = analyzeDealIntelligence({
+    domain,
+    url,
+    pageType,
+    pageText,
+    hasTimer,
+    timerResetsOnRefresh,
+    reloadStockChanges,
+    timerElements,
+    stockAlerts,
+    variantUrgency,
+    productCandidates,
+  });
+  const sharedAnalysis = analyzeCheckoutContext({
+    domain,
+    url,
+    pageText,
+    timerElements,
+    stockAlerts,
+    variantUrgency,
+    buttonLabels,
+    priceStrings,
+    productCandidates,
+  });
+
+  if (!sharedAnalysis.isShoppingPage) {
+    const { darkPatternReport, totalPatternsDetected, hiddenFeesTotal } = buildScanArtifacts({
+      domain,
+      url,
+      pageText,
+      baseAnalysis: sharedAnalysis,
+    });
+    const [report] = await db
+      .insert(detectionReportsTable)
+      .values(buildDetectionReportInsert({
+        domain,
+        url,
+        darkPatternReport,
+        totalPatternsDetected,
+        hiddenFeesTotal,
+      }))
+      .returning();
+
+    const trustRating = {
+      domain,
+      score: darkPatternReport.trustScore ?? 95,
+      tier: computeTrustTier(darkPatternReport.trustScore ?? 95),
+    };
+    const { aiCopilot } = buildScanArtifacts({
+      domain,
+      url,
+      pageText,
+      baseAnalysis: sharedAnalysis,
+      trustRating,
+    });
+
+    res.json({ report, darkPatternReport, trustRating, aiCopilot, dealIntelligence });
+    return;
+  }
 
   const userMessage = `
 Domain: ${domain}
@@ -86,35 +322,24 @@ Analyze this page for dark patterns and return the JSON analysis.`;
     return;
   }
 
-  const darkPatternReport = { ...JSON.parse(jsonMatch[0]), domain };
-
-  const totalPatternsDetected = [
-    darkPatternReport.falseUrgency?.detected,
-    darkPatternReport.falseScarcity?.detected,
-    darkPatternReport.confirmShaming?.detected,
-    darkPatternReport.hiddenFees?.detected,
-    darkPatternReport.preCheckedAddOns?.detected,
-    darkPatternReport.misdirection?.detected,
-  ].filter(Boolean).length;
-
-  const hiddenFeesTotal = darkPatternReport.hiddenFees?.totalExtra ?? null;
+  const aiReport = JSON.parse(jsonMatch[0]);
+  const { darkPatternReport, totalPatternsDetected, hiddenFeesTotal } = buildScanArtifacts({
+    domain,
+    url,
+    pageText,
+    baseAnalysis: sharedAnalysis,
+    aiReport,
+  });
 
   const [report] = await db
     .insert(detectionReportsTable)
-    .values({
+    .values(buildDetectionReportInsert({
       domain,
       url,
-      trustScore: darkPatternReport.trustScore ?? 50,
-      falseUrgencyDetected: darkPatternReport.falseUrgency?.detected ?? false,
-      falseScarcityDetected: darkPatternReport.falseScarcity?.detected ?? false,
-      confirmShamingDetected: darkPatternReport.confirmShaming?.detected ?? false,
-      hiddenFeesDetected: darkPatternReport.hiddenFees?.detected ?? false,
-      preCheckedAddOnsDetected: darkPatternReport.preCheckedAddOns?.detected ?? false,
-      misdirectionDetected: darkPatternReport.misdirection?.detected ?? false,
+      darkPatternReport,
       totalPatternsDetected,
       hiddenFeesTotal,
-      summary: darkPatternReport.summary ?? "",
-    })
+    }))
     .returning();
 
   const [existing] = await db
@@ -123,41 +348,47 @@ Analyze this page for dark patterns and return the JSON analysis.`;
     .where(eq(trustRatingsTable.domain, domain));
 
   let trustRating;
-  const scoreDelta = totalPatternsDetected === 0 ? 5 : -(totalPatternsDetected * 8);
+  const scoreDelta = computeTrustScoreDelta(totalPatternsDetected);
+  const hiddenFeesFound = darkPatternReport.hiddenFees?.detected ? 1 : 0;
 
   if (existing) {
-    const newScore = Math.max(0, Math.min(100, existing.score + scoreDelta));
+    const nextValues = buildTrustRatingMutation({
+      domain,
+      scoreDelta,
+      patternsFound: totalPatternsDetected,
+      hiddenFeesFound,
+      existing,
+    });
     const [updated] = await db
       .update(trustRatingsTable)
-      .set({
-        score: newScore,
-        tier: computeTier(newScore),
-        totalScans: existing.totalScans + 1,
-        patternsDetectedCount: existing.patternsDetectedCount + totalPatternsDetected,
-        hiddenFeesCount: existing.hiddenFeesCount + (darkPatternReport.hiddenFees?.detected ? 1 : 0),
-        lastScannedAt: new Date(),
-      })
+      .set(nextValues)
       .where(eq(trustRatingsTable.domain, domain))
       .returning();
     trustRating = updated;
   } else {
-    const initialScore = Math.max(0, Math.min(100, 70 + scoreDelta));
+    const nextValues = buildTrustRatingMutation({
+      domain,
+      scoreDelta,
+      patternsFound: totalPatternsDetected,
+      hiddenFeesFound,
+    });
     const [created] = await db
       .insert(trustRatingsTable)
-      .values({
-        domain,
-        score: initialScore,
-        tier: computeTier(initialScore),
-        totalScans: 1,
-        patternsDetectedCount: totalPatternsDetected,
-        hiddenFeesCount: darkPatternReport.hiddenFees?.detected ? 1 : 0,
-        lastScannedAt: new Date(),
-      })
+      .values(nextValues)
       .returning();
     trustRating = created;
   }
 
-  res.json({ report, darkPatternReport, trustRating });
+  const { aiCopilot } = buildScanArtifacts({
+    domain,
+    url,
+    pageText,
+    baseAnalysis: sharedAnalysis,
+    aiReport,
+    trustRating,
+  });
+
+  res.json({ report, darkPatternReport, trustRating, aiCopilot, dealIntelligence });
 });
 
 router.post("/demo/fee-estimate", async (req, res): Promise<void> => {
@@ -197,7 +428,15 @@ Estimate the true final price with all mandatory fees and return JSON.`,
   const result = JSON.parse(jsonMatch[0]);
   const savingsOpportunity = result.estimatedTotal - listedPrice;
 
-  res.json({ listedPrice, ...result, savingsOpportunity });
+  const payload = { listedPrice, ...result, savingsOpportunity };
+  const aiCopilot = buildFeeCopilot({
+    domain,
+    merchantType,
+    listedPrice,
+    result: payload,
+  });
+
+  res.json({ ...payload, aiCopilot });
 });
 
 export default router;

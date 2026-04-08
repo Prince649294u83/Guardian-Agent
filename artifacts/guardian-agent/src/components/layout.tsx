@@ -11,13 +11,14 @@ import {
   Zap,
   Calculator,
   Monitor,
+  Bot,
   Menu,
-  X,
 } from "lucide-react";
 import { useHealthCheck } from "@workspace/api-client-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, group: "main" },
+  { name: "Mission Control", href: "/agent", icon: Bot, group: "main", highlight: true },
   { name: "Live Scanner", href: "/demo", icon: Zap, group: "demo", highlight: true },
   { name: "Extension Preview", href: "/extension", icon: Monitor, group: "demo" },
   { name: "Fee Calculator", href: "/fee-calculator", icon: Calculator, group: "demo" },

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Guardian Agent</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <div class="eyebrow">Guardian Agent</div>
+      <h1>Mission Control</h1>
+      <p class="subtitle">Run a full Guardian mission from the current tab: reveal the true total, score trust, compare alternatives, and explain what to do next.</p>
+
+      <label class="field">
+        <span>API base URL</span>
+        <input id="apiBaseUrl" type="text" />
+      </label>
+
+      <label class="field">
+        <span>Mission goal</span>
+        <textarea id="missionGoal" rows="3"></textarea>
+      </label>
+
+      <div class="grid">
+        <label class="field">
+          <span>Budget</span>
+          <input id="missionBudget" type="text" placeholder="200" />
+        </label>
+        <label class="field">
+          <span>Preferences</span>
+          <textarea id="missionPreferences" rows="3"></textarea>
+        </label>
+      </div>
+
+      <label class="toggle">
+        <input id="autoAnalyze" type="checkbox" />
+        <span>Automatically scan pages after load</span>
+      </label>
+
+      <label class="toggle">
+        <input id="compareAcrossSites" type="checkbox" />
+        <span>Compare safer alternatives across sites</span>
+      </label>
+
+      <label class="toggle">
+        <input id="allowAutoDeclineUpsells" type="checkbox" />
+        <span>Prepare auto-decline for optional upsells</span>
+      </label>
+
+      <label class="toggle">
+        <input id="allowAccountCreation" type="checkbox" />
+        <span>Allow account creation behind approval gates</span>
+      </label>
+
+      <div class="actions">
+        <button id="saveSettings" class="secondary">Save</button>
+        <button id="runScan" class="secondary">Quick scan</button>
+        <button id="revealGhostCheckout" class="ghost">Reveal true total</button>
+        <button id="showSafePath" class="safe">Cheapest safe path</button>
+        <button id="runMission" class="primary">Run mission</button>
+      </div>
+
+      <section id="status" class="status">
+        <p>Waiting for a mission.</p>
+      </section>
+
+      <section id="debugPanel" class="status" style="margin-top:14px;">
+        <p><strong>Debug Info</strong></p>
+        <p>Commerce detection: <span id="debugCommerceResult">-</span></p>
+        <p>Page type: <span id="debugPageType">-</span></p>
+        <p>Products found: <span id="debugProductsCount">-</span></p>
+        <p>Current URL: <span id="debugUrlText">-</span></p>
+        <div class="actions" style="margin-top:10px;">
+          <button id="forceScanBtn" class="secondary">Force Scan Now</button>
+        </div>
+      </section>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+  </html>

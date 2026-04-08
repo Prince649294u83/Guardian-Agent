@@ -15,6 +15,7 @@ import Stats from "@/pages/stats";
 import Demo from "@/pages/demo";
 import FeeCalc from "@/pages/feecalc";
 import Extension from "@/pages/extension";
+import AgentMissionPage from "@/pages/agent";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/demo" component={Demo} />
+      <Route path="/agent" component={AgentMissionPage} />
       <Route path="/extension" component={Extension} />
       <Route path="/fee-calculator" component={FeeCalc} />
       <Route path="/trust" component={TrustRatings} />
