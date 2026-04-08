@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "mLgHWv7acmwcsppTEcFIh"
+uri = "file://artifacts/guardian-agent/public/hero-hud.png"
+type = "image"
+title = "Guardian Agent HUD interface"
+
+[[generated]]
+id = "H3TPYKZOsrI6ktRqXdxVR"
+uri = "file://artifacts/guardian-agent/public/scan-fees.png"
+type = "image"
+title = "Hidden Fees scanning visualization"
+
+[[generated]]
+id = "cndy6xLgxLTMvwb6dspiL"
+uri = "file://artifacts/guardian-agent/public/scan-urgency.png"
+type = "image"
+title = "False Urgency timer detected"

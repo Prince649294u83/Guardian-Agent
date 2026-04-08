@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Guardian Agent",
+  "version": "0.1.0",
+  "description": "Detects checkout dark patterns, surfaces risk, and explains why a page looks manipulative.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://localhost:3001/*",
+    "http://127.0.0.1:3001/*",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Guardian Agent",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "page-heuristics.js",
+        "content-script.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

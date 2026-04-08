@@ -1,0 +1,25 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: guardian-api
+    environment:
+      PORT: 3001
+      GUARDIAN_LOCAL_MOCK_API: "1"
+    ports:
+      - "3001:3001"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: guardian-web
+    depends_on:
+      - api
+    environment:
+      PORT: 3000
+      BASE_PATH: /
+      API_BASE_URL: http://api:3001
+    ports:
+      - "3000:3000"

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Guardian Agent"
+version = "1.0.0"
+id = "artifacts/guardian-agent"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19591
+
+[services.development]
+run = "pnpm --filter @workspace/guardian-agent run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/guardian-agent", "run", "build" ]
+publicDir = "artifacts/guardian-agent/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19591"
+BASE_PATH = "/"
