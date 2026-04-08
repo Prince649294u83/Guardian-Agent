@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import Body, FastAPI, Request
 from pydantic import BaseModel
+import uvicorn
 
 from guardian_openenv.environment import GuardianReviewEnvironment
 from guardian_openenv.models import GuardianAction, GuardianObservation, GuardianState, StepResult
@@ -55,3 +56,10 @@ def step(action: GuardianAction) -> StepResult:
 def state() -> GuardianState:
     return env.state()
 
+
+def main() -> None:
+    uvicorn.run("server.app:app", host="0.0.0.0", port=8000)
+
+
+if __name__ == "__main__":
+    main()
