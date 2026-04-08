@@ -27,3 +27,4 @@ server = "server.app:main"
 
 [tool.setuptools]
 packages = ["guardian_openenv", "server"]
+

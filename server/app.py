@@ -57,8 +57,11 @@ def state() -> GuardianState:
     return env.state()
 
 
-def main() -> None:
-    uvicorn.run("server.app:app", host="0.0.0.0", port=8000)
+def main():
+    import uvicorn
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("server.app:app", host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
