@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from typing import Annotated
+
+from fastapi import Body, FastAPI, Request
 from pydantic import BaseModel
 
 from guardian_openenv.environment import GuardianReviewEnvironment
@@ -26,8 +28,22 @@ def health() -> dict:
 
 
 @app.post("/reset", response_model=GuardianObservation)
-def reset(payload: ResetRequest) -> GuardianObservation:
-    return env.reset(payload.task_id)
+async def reset(request: Request) -> GuardianObservation:
+    """Accept POST /reset with an empty body OR a JSON body with optional task_id.
+
+    The OpenEnv automated checker sends an empty POST, which caused a 422 when
+    FastAPI required a JSON body. We now read the raw body and only parse it if
+    it contains non-empty content.
+    """
+    task_id: str | None = None
+    try:
+        body = await request.body()
+        if body and body.strip() not in (b"", b"null"):
+            payload = ResetRequest.model_validate_json(body)
+            task_id = payload.task_id
+    except Exception:  # noqa: BLE001
+        pass
+    return env.reset(task_id)
 
 
 @app.post("/step", response_model=StepResult)
@@ -38,3 +54,4 @@ def step(action: GuardianAction) -> StepResult:
 @app.get("/state", response_model=GuardianState)
 def state() -> GuardianState:
     return env.state()
+

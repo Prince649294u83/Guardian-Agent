@@ -1,6 +1,6 @@
 ---
 title: Guardian OpenEnv
-emoji: shield
+emoji: 🛡️
 colorFrom: blue
 colorTo: green
 sdk: docker
@@ -9,7 +9,7 @@ tags:
   - openenv
   - compliance
   - evaluation
-short_description: OpenEnv benchmark for dark-pattern investigation and remediation triage.
+short_description: OpenEnv benchmark for checkout dark-pattern defense.
 ---
 
 # Guardian OpenEnv
