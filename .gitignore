@@ -54,7 +54,7 @@ Thumbs.db
 venv/
 __pycache__/
 *.pyc
-outputs/
+# outputs/ intentionally tracked for validator (contains inference_scores.json)
 
 # local build/test artifacts
 artifacts/api-server/.test-dist/
