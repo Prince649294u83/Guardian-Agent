@@ -79,19 +79,22 @@ async def run_task(env: GuardianReviewEnvClient, client, model: str, task) -> Ba
     score = 0.0
     success = False
 
+    from guardian_openenv.models import CurrentDecision
     log_start(task=task.task_id, env=BENCHMARK, model=model)
 
-    try:
-        observation = env.reset(task.task_id)
-    except Exception as exc:
-        print(f"[ERROR] Failed to reset env for task {task.task_id}: {exc}", flush=True)
-        return BaselineEpisodeResult(
-            task_id=task.task_id, difficulty=task.difficulty, final_score=0.0,
-            total_reward=0.0, steps_taken=0, final_decision=None, grader_breakdown={"error": 1.0}
-        )
-
     final_step = None
+    observation = None
     try:
+        try:
+            observation = env.reset(task.task_id)
+        except Exception as exc:
+            print(f"[ERROR] Failed to reset env for task {task.task_id}: {exc}", flush=True)
+            log_step(step=1, action=GuardianAction(action_type=ActionType.SUBMIT_DECISION), reward=0.0, done=True, error=str(exc))
+            return BaselineEpisodeResult(
+                task_id=task.task_id, difficulty=task.difficulty, final_score=0.0,
+                total_reward=0.0, steps_taken=0, final_decision=CurrentDecision(), grader_breakdown={"error": 1.0}
+            )
+
         for step in range(1, task.max_steps + 1):
             if observation.done:
                 break
@@ -140,7 +143,7 @@ async def run_task(env: GuardianReviewEnvClient, client, model: str, task) -> Ba
         print(f"[ERROR] Task {task.task_id} failed: {exc}", flush=True)
         return BaselineEpisodeResult(
             task_id=task.task_id, difficulty=task.difficulty, final_score=0.0,
-            total_reward=0.0, steps_taken=steps_taken, final_decision=None, grader_breakdown={"error": 1.0}
+            total_reward=0.0, steps_taken=steps_taken, final_decision=observation.current_decision if observation else CurrentDecision(), grader_breakdown={"error": 1.0}
         )
     finally:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards, task_id=task.task_id)
@@ -166,13 +169,13 @@ async def main() -> None:
     try:
         client, model = build_client(strict_submission_env=True)
     except Exception as exc:
-        print(f"[ERROR] Inference failed to start: {exc}", flush=True)
-        sys.exit(0)
+        print(f"[ERROR] Inference failed to start client: {exc}", flush=True)
+        client, model = None, "mock-model"
 
-    base_url = "http://127.0.0.1:8000"
+    import os
+    base_url = os.environ.get("ENV_BASE_URL", "http://127.0.0.1:8000")
     if not wait_for_server(base_url):
-        print(f"[ERROR] Target container not reachable at {base_url}", flush=True)
-        sys.exit(0)
+        print(f"[ERROR] Target container not reachable at {base_url}, but continuing execution to emit logs.", flush=True)
 
     env = GuardianReviewEnvClient(base_url=base_url)
     results: list[BaselineEpisodeResult] = []
@@ -203,4 +206,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except Exception as exc:
         print(f"[FATAL ERROR] Unexpected exception: {exc}", flush=True)
-        sys.exit(0)
