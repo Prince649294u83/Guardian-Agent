@@ -264,7 +264,8 @@ def run_inference(
 
         state = env.state()
         breakdown = final_step.info.get("grader_breakdown", {})
-        final_score = float(final_step.info.get("final_score", breakdown.get("final_score", 0.0)))
+        final_score_raw = float(final_step.info.get("final_score", breakdown.get("final_score", 0.001)))
+        final_score = min(max(final_score_raw, 0.001), 0.999)
         results.append(
             BaselineEpisodeResult(
                 task_id=task.task_id,

@@ -33,7 +33,7 @@ class GuardianReviewEnvironment:
         )
         self._last_opened_section_id: str | None = None
         self._history: list[str] = []
-        self._last_score = 0.0
+        self._last_score = 0.001
 
     def reset(self, task_id: str | None = None) -> GuardianObservation:
         if task_id is None:
@@ -53,7 +53,7 @@ class GuardianReviewEnvironment:
         )
         self._last_opened_section_id = None
         self._history = []
-        self._last_score = 0.0
+        self._last_score = 0.001
         return self._build_observation("New checkout protection task loaded.")
 
     def state(self) -> GuardianState:

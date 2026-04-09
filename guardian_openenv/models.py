@@ -42,7 +42,7 @@ class RewardComponent(BaseModel):
 
 class GuardianReward(BaseModel):
     value: float = Field(ge=-1.0, le=1.0)
-    score: float = Field(ge=0.0, le=1.0)
+    score: float = Field(gt=0.0, lt=1.0)
     components: list[RewardComponent] = Field(default_factory=list)
     reason: str
 
