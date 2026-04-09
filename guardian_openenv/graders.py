@@ -74,14 +74,17 @@ def grade_decision(
         + 0.08 * evidence_score
         + 0.04 * summary_score
     )
-    final_score = min(max(final_score, 0.001), 0.999)
+    
+    def clip(s: float) -> float:
+        return min(max(s, 0.001), 0.999)
+
     return {
-        "pattern_score": round(pattern_score, 4),
-        "addon_score": round(addon_score, 4),
-        "timer_score": round(timer_score, 4),
-        "total_score": round(total_score, 4),
-        "recommendation_score": round(recommendation_score, 4),
-        "evidence_score": round(evidence_score, 4),
-        "summary_score": round(summary_score, 4),
-        "final_score": round(final_score, 4),
+        "pattern_score": round(clip(pattern_score), 4),
+        "addon_score": round(clip(addon_score), 4),
+        "timer_score": round(clip(timer_score), 4),
+        "total_score": round(clip(total_score), 4),
+        "recommendation_score": round(clip(recommendation_score), 4),
+        "evidence_score": round(clip(evidence_score), 4),
+        "summary_score": round(clip(summary_score), 4),
+        "final_score": round(clip(final_score), 4),
     }
