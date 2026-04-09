@@ -74,6 +74,7 @@ def grade_decision(
         + 0.08 * evidence_score
         + 0.04 * summary_score
     )
+    final_score = min(max(final_score, 0.001), 0.999)
     return {
         "pattern_score": round(pattern_score, 4),
         "addon_score": round(addon_score, 4),
