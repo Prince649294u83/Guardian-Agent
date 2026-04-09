@@ -6,47 +6,47 @@ from guardian_openenv.tasks import TaskDefinition
 
 def _f1_score(predicted: set[str], gold: set[str]) -> float:
     if not predicted and not gold:
-        return 1.0
+        return 0.999
     if not predicted or not gold:
-        return 0.0
+        return 0.001
     overlap = len(predicted & gold)
     precision = overlap / len(predicted)
     recall = overlap / len(gold)
     if precision + recall == 0:
-        return 0.0
-    return (2 * precision * recall) / (precision + recall)
+        return 0.001
+    return min(max((2 * precision * recall) / (precision + recall), 0.001), 0.999)
 
 
 def _keyword_score(summary: str, keywords: list[str]) -> float:
     if not keywords:
-        return 1.0
+        return 0.999
     summary_lower = summary.lower()
     matches = sum(1 for keyword in keywords if keyword.lower() in summary_lower)
-    return matches / len(keywords)
+    return min(max(matches / len(keywords), 0.001), 0.999)
 
 
 def _total_accuracy_score(predicted: float | None, gold: float) -> float:
     if predicted is None:
-        return 0.0
+        return 0.001
     delta = abs(predicted - gold)
     if delta <= 0.5:
-        return 1.0
+        return 0.999
     tolerance = max(5.0, gold * 0.12)
-    return max(0.0, 1.0 - (delta / tolerance))
+    return min(max(1.0 - (delta / tolerance), 0.001), 0.999)
 
 
 def _timer_score(predicted: dict[str, bool], gold_fake_timer_ids: list[str], task: TaskDefinition) -> float:
     if not task.urgency_timers:
-        return 1.0
+        return 0.999
     gold = {timer_id: timer_id in set(gold_fake_timer_ids) for timer_id in [timer.timer_id for timer in task.urgency_timers]}
     matches = sum(1 for timer_id, is_fake in gold.items() if predicted.get(timer_id) == is_fake)
-    return matches / len(gold)
+    return min(max(matches / len(gold), 0.001), 0.999)
 
 
 def _recommendation_score(predicted: RecommendationDecision | None, gold: RecommendationDecision) -> float:
     if predicted is None:
-        return 0.0
-    return 1.0 if predicted == gold else 0.0
+        return 0.001
+    return 0.999 if predicted == gold else 0.001
 
 
 def grade_decision(
