@@ -64,6 +64,7 @@ def grade_decision(
     recommendation_score = _recommendation_score(decision.recommendation, task.gold_recommendation)
     evidence_score = len(opened_section_ids & set(task.required_section_ids)) / len(task.required_section_ids)
     summary_score = _keyword_score(decision.summary, task.summary_keywords)
+    evidence_score = min(max(evidence_score, 0.001), 0.999)
 
     final_score = (
         0.24 * pattern_score

@@ -92,7 +92,7 @@ async def run_task(env: GuardianReviewEnvClient, client, model: str, task) -> Ba
             log_step(step=1, action=GuardianAction(action_type=ActionType.SUBMIT_DECISION), reward=0.0, done=True, error=str(exc))
             return BaselineEpisodeResult(
                 task_id=task.task_id, difficulty=task.difficulty, final_score=0.001,
-                total_reward=0.0, steps_taken=0, final_decision=CurrentDecision(), grader_breakdown={"error": 1.0}
+                total_reward=0.0, steps_taken=0, final_decision=CurrentDecision(), grader_breakdown={"error": 0.999}
             )
 
         for step in range(1, task.max_steps + 1):
@@ -143,7 +143,7 @@ async def run_task(env: GuardianReviewEnvClient, client, model: str, task) -> Ba
         print(f"[ERROR] Task {task.task_id} failed: {exc}", flush=True)
         return BaselineEpisodeResult(
             task_id=task.task_id, difficulty=task.difficulty, final_score=0.001,
-            total_reward=0.0, steps_taken=steps_taken, final_decision=observation.current_decision if observation else CurrentDecision(), grader_breakdown={"error": 1.0}
+            total_reward=0.0, steps_taken=steps_taken, final_decision=observation.current_decision if observation else CurrentDecision(), grader_breakdown={"error": 0.999}
         )
     finally:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards, task_id=task.task_id)
@@ -193,7 +193,7 @@ async def main() -> None:
     summary = BaselineRunSummary(
         model=model,
         tasks=results,
-        mean_score=(sum(item.final_score for item in results) / len(results)) if results else 0.0,
+        mean_score=min(max((sum(item.final_score for item in results) / len(results)) if results else 0.001, 0.001), 0.999),
     )
 
     output = Path(OUTPUT_PATH)
