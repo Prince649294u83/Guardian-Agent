@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
+import time
 from pathlib import Path
 from typing import Any
 
-from guardian_openenv.environment import GuardianReviewEnvironment
+from guardian_openenv.client import GuardianReviewEnvClient
 from guardian_openenv.inference_runtime import build_client, next_action
 from guardian_openenv.models import ActionType, BaselineEpisodeResult, BaselineRunSummary, GuardianAction
 from guardian_openenv.tasks import TASKS
@@ -70,7 +72,7 @@ def get_model_action(client, model: str, observation) -> GuardianAction:
         return fallback_action(observation)
 
 
-async def run_task(env: GuardianReviewEnvironment, client, model: str, task) -> BaselineEpisodeResult:
+async def run_task(env: GuardianReviewEnvClient, client, model: str, task) -> BaselineEpisodeResult:
     history: list[str] = []
     rewards: list[float] = []
     steps_taken = 0
@@ -79,32 +81,41 @@ async def run_task(env: GuardianReviewEnvironment, client, model: str, task) -> 
 
     log_start(task=task.task_id, env=BENCHMARK, model=model)
 
-    observation = env.reset(task.task_id)
-    final_step = None
+    try:
+        observation = env.reset(task.task_id)
+    except Exception as exc:
+        print(f"[ERROR] Failed to reset env for task {task.task_id}: {exc}", flush=True)
+        return BaselineEpisodeResult(
+            task_id=task.task_id, difficulty=task.difficulty, final_score=0.0,
+            total_reward=0.0, steps_taken=0, final_decision=None, grader_breakdown={"error": 1.0}
+        )
 
+    final_step = None
     try:
         for step in range(1, task.max_steps + 1):
             if observation.done:
                 break
 
             action = get_model_action(client, model, observation)
-            result = env.step(action)
-            observation = result.observation
+            try:
+                result = env.step(action)
+            except Exception as e:
+                log_step(step=step, action=action, reward=0.0, done=True, error=str(e))
+                break
 
+            observation = result.observation
             reward = result.reward.value if result.reward else 0.0
             done = result.done
-            error = None
 
             rewards.append(reward)
             steps_taken = step
 
-            log_step(step=step, action=action, reward=reward, done=done, error=error)
+            log_step(step=step, action=action, reward=reward, done=done)
             history.append(f"Step {step}: {action.model_dump(mode='json', exclude_none=True)!r} -> reward {reward:+.2f}")
             final_step = result
 
             if done:
                 break
-
             await asyncio.sleep(0)
 
         if final_step is None:
@@ -115,37 +126,66 @@ async def run_task(env: GuardianReviewEnvironment, client, model: str, task) -> 
         score = min(max(score, 0.0), 1.0)
         success = score >= SUCCESS_SCORE_THRESHOLD
 
+        state = env.state()
         return BaselineEpisodeResult(
             task_id=task.task_id,
             difficulty=task.difficulty,
             final_score=score,
-            total_reward=env.state().cumulative_reward,
+            total_reward=state.cumulative_reward,
             steps_taken=steps_taken,
-            final_decision=env.state().decision,
+            final_decision=state.decision,
             grader_breakdown=grader_breakdown,
+        )
+    except Exception as exc:
+        print(f"[ERROR] Task {task.task_id} failed: {exc}", flush=True)
+        return BaselineEpisodeResult(
+            task_id=task.task_id, difficulty=task.difficulty, final_score=0.0,
+            total_reward=0.0, steps_taken=steps_taken, final_decision=None, grader_breakdown={"error": 1.0}
         )
     finally:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards, task_id=task.task_id)
 
 
-async def main() -> None:
-    client, model = build_client(strict_submission_env=True)
-    env = GuardianReviewEnvironment()
+def wait_for_server(base_url: str, retries: int = 5, delay: int = 2) -> bool:
+    import httpx
+    print(f"Waiting for server at {base_url}...", flush=True)
+    for i in range(retries):
+        try:
+            r = httpx.get(f"{base_url}/health", timeout=5.0)
+            if r.status_code == 200:
+                print("Server is up!", flush=True)
+                return True
+        except Exception:
+            pass
+        print(f"Server not ready, retrying in {delay}s ({i+1}/{retries})...", flush=True)
+        time.sleep(delay)
+    return False
 
+
+async def main() -> None:
+    try:
+        client, model = build_client(strict_submission_env=True)
+    except Exception as exc:
+        print(f"[ERROR] Inference failed to start: {exc}", flush=True)
+        sys.exit(0)
+
+    base_url = "http://127.0.0.1:8000"
+    if not wait_for_server(base_url):
+        print(f"[ERROR] Target container not reachable at {base_url}", flush=True)
+        sys.exit(0)
+
+    env = GuardianReviewEnvClient(base_url=base_url)
     results: list[BaselineEpisodeResult] = []
 
     try:
         for task in TASKS:
             results.append(await run_task(env, client, model, task))
     finally:
-        close_method = getattr(env, "close", None)
-        if callable(close_method):
+        if hasattr(env, "close") and callable(env.close):
             try:
-                maybe_result = close_method()
-                if asyncio.iscoroutine(maybe_result):
-                    await maybe_result
-            except Exception as exc:  # noqa: BLE001
-                print(f"[DEBUG] env.close() error (container cleanup): {exc}", flush=True)
+                env.close()
+            except Exception as e:
+                print(f"[DEBUG] Failed to close env gracefully: {e}")
 
     summary = BaselineRunSummary(
         model=model,
@@ -159,4 +199,8 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as exc:
+        print(f"[FATAL ERROR] Unexpected exception: {exc}", flush=True)
+        sys.exit(0)
