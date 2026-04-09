@@ -277,10 +277,11 @@ def run_inference(
             )
         )
 
+    raw_mean = sum(item.final_score for item in results) / len(results) if results else 0.001
     summary = BaselineRunSummary(
         model=model,
         tasks=results,
-        mean_score=sum(item.final_score for item in results) / len(results),
+        mean_score=min(max(raw_mean, 0.001), 0.999),
     )
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
