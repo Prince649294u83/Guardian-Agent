@@ -76,7 +76,7 @@ async def run_task(env: GuardianReviewEnvClient, client, model: str, task) -> Ba
     history: list[str] = []
     rewards: list[float] = []
     steps_taken = 0
-    score = 0.0
+    score = 0.001
     success = False
 
     from guardian_openenv.models import CurrentDecision
@@ -91,7 +91,7 @@ async def run_task(env: GuardianReviewEnvClient, client, model: str, task) -> Ba
             print(f"[ERROR] Failed to reset env for task {task.task_id}: {exc}", flush=True)
             log_step(step=1, action=GuardianAction(action_type=ActionType.SUBMIT_DECISION), reward=0.0, done=True, error=str(exc))
             return BaselineEpisodeResult(
-                task_id=task.task_id, difficulty=task.difficulty, final_score=0.0,
+                task_id=task.task_id, difficulty=task.difficulty, final_score=0.001,
                 total_reward=0.0, steps_taken=0, final_decision=CurrentDecision(), grader_breakdown={"error": 1.0}
             )
 
@@ -125,8 +125,8 @@ async def run_task(env: GuardianReviewEnvClient, client, model: str, task) -> Ba
             raise RuntimeError(f"Inference never executed a step for task {task.task_id}")
 
         grader_breakdown = final_step.info.get("grader_breakdown", {})
-        score = float(final_step.info.get("final_score", final_step.reward.score if final_step.reward else 0.0))
-        score = min(max(score, 0.0), 1.0)
+        score = float(final_step.info.get("final_score", final_step.reward.score if final_step.reward else 0.001))
+        score = min(max(score, 0.001), 0.999)
         success = score >= SUCCESS_SCORE_THRESHOLD
 
         state = env.state()
@@ -142,7 +142,7 @@ async def run_task(env: GuardianReviewEnvClient, client, model: str, task) -> Ba
     except Exception as exc:
         print(f"[ERROR] Task {task.task_id} failed: {exc}", flush=True)
         return BaselineEpisodeResult(
-            task_id=task.task_id, difficulty=task.difficulty, final_score=0.0,
+            task_id=task.task_id, difficulty=task.difficulty, final_score=0.001,
             total_reward=0.0, steps_taken=steps_taken, final_decision=observation.current_decision if observation else CurrentDecision(), grader_breakdown={"error": 1.0}
         )
     finally:
