@@ -37,8 +37,8 @@ def main() -> None:
             )
         )
         score = step_result.reward.score
-        if not (0.0 <= score <= 1.0):
-            raise SystemExit(f"Reward score out of range for {task.task_id}: {score}")
+        if not (0.0 < score < 1.0):
+            raise SystemExit(f"Reward score out of range for {task.task_id}: {score} (must be strictly between 0 and 1)")
 
     print("Submission validation passed.")
 
