@@ -49,29 +49,29 @@ def build_client(strict_submission_env: bool = True) -> tuple[OpenAI, str]:
     load_dotenv()
 
     api_base_url = os.environ.get("API_BASE_URL")
-    model_name = os.environ.get("MODEL_NAME")
-    hf_token = os.environ.get("HF_TOKEN")
+    model_name = os.environ.get("MODEL_NAME", "default-proxy-model")
+    api_key = os.environ.get("API_KEY", os.environ.get("HF_TOKEN"))
 
     if strict_submission_env:
-        missing = [name for name, value in {"API_BASE_URL": api_base_url, "MODEL_NAME": model_name, "HF_TOKEN": hf_token}.items() if not value]
+        missing = [name for name, value in {"API_BASE_URL": api_base_url, "API_KEY": api_key}.items() if not value]
         if missing:
             raise RuntimeError(
                 f"Missing required environment variables for inference: {', '.join(missing)}"
             )
-        return OpenAI(api_key=hf_token, base_url=api_base_url), model_name
+        return OpenAI(api_key=api_key, base_url=api_base_url), model_name
 
     openai_key = os.environ.get("OPENAI_API_KEY")
     openai_base_url = os.environ.get("OPENAI_BASE_URL")
     openai_model = os.environ.get("OPENAI_MODEL")
 
-    if api_base_url and model_name and hf_token:
-        return OpenAI(api_key=hf_token, base_url=api_base_url), model_name
+    if api_base_url and api_key:
+        return OpenAI(api_key=api_key, base_url=api_base_url), model_name
     if openai_key:
         client_kwargs = {"api_key": openai_key}
         if openai_base_url:
             client_kwargs["base_url"] = openai_base_url
         return OpenAI(**client_kwargs), openai_model or "gpt-4.1-mini"
-    raise RuntimeError("Provide API_BASE_URL, MODEL_NAME, HF_TOKEN or OPENAI_API_KEY to run inference.")
+    raise RuntimeError("Provide API_BASE_URL+API_KEY or OPENAI_API_KEY to run inference.")
 
 
 def observation_to_prompt(observation) -> str:
