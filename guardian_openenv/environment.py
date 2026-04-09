@@ -130,7 +130,7 @@ class GuardianReviewEnvironment:
                         reason="Decision submitted before reviewing the core checkout sections.",
                     )
                 )
-            reward_value = max(0.0, min(1.0, current_score + reward_value))
+            reward_value = max(0.001, min(0.999, current_score + reward_value))
             self._state.done = True
             done = True
             info["final_score"] = current_score
@@ -138,7 +138,7 @@ class GuardianReviewEnvironment:
         if self._state.step_count >= self._state.max_steps and not done:
             self._state.done = True
             done = True
-            reward_value = max(0.0, current_score - 0.1)
+            reward_value = max(0.001, current_score - 0.1)
             message = "Maximum step budget reached before submission."
             components.append(
                 RewardComponent(
