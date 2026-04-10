@@ -1,7 +1,43 @@
+version: "1.0"
 spec_version: 1
 name: guardian-openenv
+description: >-
+  OpenEnv-compatible shopping-protector environment. An AI agent reviews
+  e-commerce checkout flows, identifies dark patterns, strips unnecessary
+  add-ons, verifies fake urgency timers, and recommends whether the
+  shopper should proceed.
 type: space
 runtime: fastapi
 app: server.app:app
 port: 8000
 
+tasks:
+  - id: "value-hotel-budget-guard"
+    name: "Protect a hotel shopper from hidden fees and FOMO"
+    description: >-
+      Act like a manipulation blocker for a hotel shopper. Inspect the
+      checkout, strip unnecessary add-ons, verify whether urgency claims
+      are fake, estimate the true final price against the shopper budget,
+      and decide if the shopper should proceed.
+    difficulty: "easy"
+    grader: "guardian_openenv.task_graders:grade_value_hotel_budget_guard"
+
+  - id: "airline-seat-upsell-gauntlet"
+    name: "Navigate an airline upsell funnel before purchase"
+    description: >-
+      Protect the traveler from a seat-selection upsell gauntlet. Identify
+      dark patterns, remove unnecessary extras, judge whether the countdown
+      is fake, calculate the true checkout total, and recommend whether to
+      continue.
+    difficulty: "medium"
+    grader: "guardian_openenv.task_graders:grade_airline_seat_upsell_gauntlet"
+
+  - id: "marketplace-ghost-checkout"
+    name: "Run a ghost checkout before the shopper commits"
+    description: >-
+      Behave like a premium manipulation blocker. Use the checkout evidence
+      to uncover late fees, spot fake scarcity, remove optional upsells,
+      verify timers, and determine the real final total before the shopper
+      falls for sunk-cost pressure.
+    difficulty: "hard"
+    grader: "guardian_openenv.task_graders:grade_marketplace_ghost_checkout"
