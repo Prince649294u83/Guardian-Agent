@@ -13,16 +13,25 @@ RUN useradd -m -u 1000 appuser
 
 WORKDIR /app
 
-# Install Python dependencies first (cached layer)
+# ── Step 1: Install all deps EXCEPT openenv-core (avoids openai>=2 conflict)
 COPY requirements.txt pyproject.toml ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir \
+    fastapi>=0.115.0 \
+    "httpx>=0.28.0,<1.0.0" \
+    "openai>=1.60.0,<2.0.0" \
+    "pydantic>=2.9.0,<3.0.0" \
+    PyYAML>=6.0.0 \
+    "uvicorn[standard]>=0.30.0"
 
-# Copy source and install the package itself in non-editable mode
+# ── Step 2: Install openenv-core without its conflicting transitive deps
+#    (openenv-core 0.2.x requires openai>=2.7.2 which conflicts with our 1.x pin)
+RUN pip install --no-cache-dir --no-deps "openenv-core>=0.2.0"
+
+# ── Step 3: Copy source and install the package itself
 COPY guardian_openenv/ ./guardian_openenv/
 COPY server/ ./server/
 COPY openenv.yaml inference.py validate_submission.py README.md ./
 
-# Install the guardian_openenv package so its entry-points are discoverable
 RUN pip install --no-cache-dir --no-deps -e .
 
 # Pre-create the outputs directory with correct permissions
