@@ -20,7 +20,7 @@ tasks:
       are fake, estimate the true final price against the shopper budget,
       and decide if the shopper should proceed.
     difficulty: "easy"
-    grader: "tasks.value_hotel_budget_guard.grader:grade"
+    grader: "guardian_openenv.task_graders:grade_value_hotel_budget_guard"
 
   - id: "airline_seat_upsell_gauntlet"
     name: "Navigate an airline upsell funnel before purchase"
@@ -30,7 +30,7 @@ tasks:
       is fake, calculate the true checkout total, and recommend whether to
       continue.
     difficulty: "medium"
-    grader: "tasks.airline_seat_upsell_gauntlet.grader:grade"
+    grader: "guardian_openenv.task_graders:grade_airline_seat_upsell_gauntlet"
 
   - id: "marketplace_ghost_checkout"
     name: "Run a ghost checkout before the shopper commits"
@@ -40,4 +40,4 @@ tasks:
       verify timers, and determine the real final total before the shopper
       falls for sunk-cost pressure.
     difficulty: "hard"
-    grader: "tasks.marketplace_ghost_checkout.grader:grade"
+    grader: "guardian_openenv.task_graders:grade_marketplace_ghost_checkout"
