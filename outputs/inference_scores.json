@@ -1,84 +1,94 @@
 {
-  "model": "rule-based-fallback",
+  "model": "llama-3.3-70b-versatile",
   "tasks": [
     {
       "task_id": "value-hotel-budget-guard",
       "difficulty": "easy",
-      "final_score": 0.0808,
-      "total_reward": 0.3106,
-      "steps_taken": 5,
+      "final_score": 0.261,
+      "total_reward": 0.701,
+      "steps_taken": 9,
       "final_decision": {
         "flagged_patterns": [],
-        "removed_addon_ids": [],
+        "removed_addon_ids": [
+          "insurance",
+          "newsletter"
+        ],
         "kept_addon_ids": [],
         "timer_verdicts": {},
-        "estimated_true_total": null,
+        "estimated_true_total": 187.0,
         "recommendation": null,
         "summary": ""
       },
       "grader_breakdown": {
         "pattern_score": 0.001,
-        "addon_score": 0.001,
+        "addon_score": 0.999,
         "timer_score": 0.001,
-        "total_score": 0.001,
+        "total_score": 0.0038,
         "recommendation_score": 0.001,
         "evidence_score": 0.999,
         "summary_score": 0.001,
-        "final_score": 0.0808
+        "final_score": 0.261
       }
     },
     {
       "task_id": "airline-seat-upsell-gauntlet",
       "difficulty": "medium",
-      "final_score": 0.0808,
-      "total_reward": 0.3106,
-      "steps_taken": 5,
+      "final_score": 0.4301,
+      "total_reward": 1.1692,
+      "steps_taken": 8,
       "final_decision": {
-        "flagged_patterns": [],
-        "removed_addon_ids": [],
+        "flagged_patterns": [
+          "confirm_shaming"
+        ],
+        "removed_addon_ids": [
+          "travelguard"
+        ],
         "kept_addon_ids": [],
         "timer_verdicts": {},
-        "estimated_true_total": null,
+        "estimated_true_total": 276.98,
         "recommendation": null,
         "summary": ""
       },
       "grader_breakdown": {
-        "pattern_score": 0.001,
-        "addon_score": 0.001,
+        "pattern_score": 0.3333,
+        "addon_score": 0.5,
         "timer_score": 0.001,
-        "total_score": 0.001,
+        "total_score": 0.999,
         "recommendation_score": 0.001,
         "evidence_score": 0.999,
         "summary_score": 0.001,
-        "final_score": 0.0808
+        "final_score": 0.4301
       }
     },
     {
       "task_id": "marketplace-ghost-checkout",
       "difficulty": "hard",
-      "final_score": 0.0808,
-      "total_reward": 0.3106,
-      "steps_taken": 6,
+      "final_score": 0.2442,
+      "total_reward": 0.6874,
+      "steps_taken": 9,
       "final_decision": {
         "flagged_patterns": [],
-        "removed_addon_ids": [],
+        "removed_addon_ids": [
+          "protection-plan",
+          "seller-donation"
+        ],
         "kept_addon_ids": [],
         "timer_verdicts": {},
-        "estimated_true_total": null,
+        "estimated_true_total": 139.98,
         "recommendation": null,
         "summary": ""
       },
       "grader_breakdown": {
         "pattern_score": 0.001,
-        "addon_score": 0.001,
+        "addon_score": 0.8,
         "timer_score": 0.001,
-        "total_score": 0.001,
+        "total_score": 0.1094,
         "recommendation_score": 0.001,
         "evidence_score": 0.999,
         "summary_score": 0.001,
-        "final_score": 0.0808
+        "final_score": 0.2442
       }
     }
   ],
-  "mean_score": 0.0808
+  "mean_score": 0.3118
 }

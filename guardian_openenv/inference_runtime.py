@@ -23,14 +23,29 @@ from guardian_openenv.tasks import TASKS
 
 SYSTEM_PROMPT = """You are Guardian Agent, a consumer-protection shopping assistant.
 Your job is to protect a shopper from dark patterns, fake urgency, hidden fees, and unnecessary upsells.
-Return exactly one JSON object for the next action.
-Prioritize:
-1. Inspecting the most informative checkout sections first
-2. Removing unnecessary extras
-3. Verifying whether timers are fake
-4. Estimating the true final total against the budget
-5. Recommending whether the shopper should proceed
-Only use valid action types and ids from the observation."""
+Return exactly one JSON object for the next action. Do NOT add any text outside the JSON.
+
+FIELD REQUIREMENTS — read carefully and follow exactly:
+- inspect_section:    {"action_type": "inspect_section",    "section_id": "<id from section_index>"}
+- remove_addon:       {"action_type": "remove_addon",       "addon_id": "<id from optional_addons>"}
+- keep_addon:         {"action_type": "keep_addon",         "addon_id": "<id from optional_addons>"}
+- flag_pattern:       {"action_type": "flag_pattern",       "pattern": "<slug: false_urgency|false_scarcity|confirm_shaming|hidden_fees|prechecked_addons|misdirection>"}
+- unflag_pattern:     {"action_type": "unflag_pattern",     "pattern": "<same slugs>"}
+- verify_timer:       {"action_type": "verify_timer",       "timer_id": "<id from urgency_timers>", "timer_is_fake": true}
+                       NOTE: timer_is_fake MUST be a JSON boolean (true or false), not a string.
+- set_true_total:     {"action_type": "set_true_total",     "estimated_true_total": <number>}
+- set_recommendation: {"action_type": "set_recommendation", "recommendation": "<buy|buy_with_caution|avoid>"}
+- write_summary:      {"action_type": "write_summary",      "summary": "<text>"}
+- submit_decision:    {"action_type": "submit_decision"}
+
+Priority order:
+1. Inspect the most informative checkout sections (use ids from section_index)
+2. Flag dark patterns using exact slugs from the list above
+3. Remove unnecessary extras (use addon_id from optional_addons list)
+4. Verify whether timers are fake (timer_is_fake must be boolean true or false)
+5. Estimate the true final total
+6. Set a recommendation and write a summary
+7. Submit the decision when the shopper is protected"""
 
 
 def load_dotenv() -> None:
@@ -60,18 +75,33 @@ def build_client(strict_submission_env: bool = True) -> tuple[OpenAI, str]:
             )
         return OpenAI(api_key=api_key, base_url=api_base_url), model_name
 
+    # Non-strict: try all supported provider patterns in priority order
     openai_key = os.environ.get("OPENAI_API_KEY")
     openai_base_url = os.environ.get("OPENAI_BASE_URL")
     openai_model = os.environ.get("OPENAI_MODEL")
 
+    groq_key = os.environ.get("GROQ_API_KEY")
+    groq_model = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+    # 1) Explicit API_BASE_URL + API_KEY (HF router, Together, etc.)
     if api_base_url and api_key:
         return OpenAI(api_key=api_key, base_url=api_base_url), model_name
+
+    # 2) Direct OpenAI
     if openai_key:
-        client_kwargs = {"api_key": openai_key}
+        client_kwargs: dict = {"api_key": openai_key}
         if openai_base_url:
             client_kwargs["base_url"] = openai_base_url
         return OpenAI(**client_kwargs), openai_model or "gpt-4.1-mini"
-    raise RuntimeError("Provide API_BASE_URL+API_KEY or OPENAI_API_KEY to run inference.")
+
+    # 3) Groq (OpenAI-compatible)
+    if groq_key:
+        return OpenAI(api_key=groq_key, base_url="https://api.groq.com/openai/v1"), groq_model
+
+    raise RuntimeError(
+        "Provide one of: API_BASE_URL+API_KEY, OPENAI_API_KEY, or GROQ_API_KEY to run inference."
+    )
+
 
 
 def observation_to_prompt(observation) -> str:
@@ -131,14 +161,19 @@ def normalize_action_payload(payload: dict) -> dict:
         "section_key": "section_id",
         "addon": "addon_id",
         "addon_key": "addon_id",
+        "item_id": "addon_id",          # LLMs sometimes echo the cart item field name
         "pattern_label": "pattern",
         "pattern_name": "pattern",
         "label": "pattern",
         "timer": "timer_id",
         "timer_key": "timer_id",
         "is_fake": "timer_is_fake",
+        "is_fake_timer": "timer_is_fake",
+        "fake": "timer_is_fake",
+        "verdict": "timer_is_fake",     # LLMs may return {"verdict": "fake"}
         "true_total": "estimated_true_total",
         "amount": "estimated_true_total",
+        "total": "estimated_true_total",
         "decision": "recommendation",
         "recommendation_label": "recommendation",
         "report_summary": "summary",
@@ -146,6 +181,34 @@ def normalize_action_payload(payload: dict) -> dict:
     for source_key, target_key in alias_map.items():
         if source_key in normalized and target_key not in normalized:
             normalized[target_key] = normalized[source_key]
+
+    # Special-case: verdict might be "fake"/"real"/"yes"/"no" instead of bool
+    if "timer_is_fake" in normalized and not isinstance(normalized["timer_is_fake"], bool):
+        raw_verdict = str(normalized["timer_is_fake"]).lower().strip()
+        normalized["timer_is_fake"] = raw_verdict in {"fake", "true", "yes", "1"}
+
+    # Special-case: pattern might be a sentence LLMs describe rather than enum slug
+    if "pattern" in normalized and isinstance(normalized["pattern"], str):
+        p = normalized["pattern"].lower().replace(" ", "_").replace("-", "_")
+        pattern_synonyms = {
+            "false_urgency": "false_urgency",
+            "fake_urgency": "false_urgency",
+            "urgency": "false_urgency",
+            "false_scarcity": "false_scarcity",
+            "fake_scarcity": "false_scarcity",
+            "scarcity": "false_scarcity",
+            "confirm_shaming": "confirm_shaming",
+            "shaming": "confirm_shaming",
+            "hidden_fees": "hidden_fees",
+            "hidden_fee": "hidden_fees",
+            "fee": "hidden_fees",
+            "prechecked_addons": "prechecked_addons",
+            "pre_checked": "prechecked_addons",
+            "pre_selected": "prechecked_addons",
+            "prechecked": "prechecked_addons",
+            "misdirection": "misdirection",
+        }
+        normalized["pattern"] = pattern_synonyms.get(p, normalized["pattern"])
 
     compact_fields = [
         normalized.get("action_input"),
@@ -172,6 +235,7 @@ def normalize_action_payload(payload: dict) -> dict:
         elif prefix in {"set_recommendation", "recommendation"} and "recommendation" not in normalized:
             normalized["recommendation"] = suffix
     return normalized
+
 
 
 def next_action(client: OpenAI, model: str, observation) -> GuardianAction:

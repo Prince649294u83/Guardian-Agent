@@ -149,7 +149,14 @@ Useful endpoints:
 Example reset:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/reset -H "content-type: application/json" -d "{\"task_id\": \"airline-addon-audit\"}"
+# Reset to the easy hotel task
+curl -X POST http://127.0.0.1:8000/reset -H "content-type: application/json" -d '{"task_id": "value-hotel-budget-guard"}'
+
+# Reset to the medium airline task
+curl -X POST http://127.0.0.1:8000/reset -H "content-type: application/json" -d '{"task_id": "airline-seat-upsell-gauntlet"}'
+
+# Reset to the hard marketplace task
+curl -X POST http://127.0.0.1:8000/reset -H "content-type: application/json" -d '{"task_id": "marketplace-ghost-checkout"}'
 ```
 
 ## Docker
@@ -204,20 +211,30 @@ For the execution backlog that turns this into a production-grade product, see [
 
 ## Required Inference Entry Point
 
-The submission-ready inference script is [inference.py](d:/Projects/Guardian-Agent/Guardian-Agent/inference.py) in the repo root.
+The submission-ready inference script is `inference.py` in the repo root.
 
-It uses the OpenAI Python client for all LLM calls and reads the required variables:
+It uses the OpenAI Python client for all LLM calls. Credentials are read in this priority order:
 
-- `API_BASE_URL`
-- `MODEL_NAME`
-- `HF_TOKEN`
+| Priority | Variables | Provider |
+|----------|-----------|----------|
+| 1 | `API_BASE_URL` + `API_KEY` + `MODEL_NAME` | HF router / any OpenAI-compat API |
+| 2 | `OPENAI_API_KEY` (+ optional `OPENAI_MODEL`) | Direct OpenAI |
+| 3 | `GROQ_API_KEY` (+ optional `GROQ_MODEL`) | Groq (Llama 3.3 70B by default) |
+| 4 | *(none)* | Rule-based fallback — lower scores |
 
-Example:
+Example for HF submission:
 
 ```env
 API_BASE_URL=https://router.huggingface.co/v1
 MODEL_NAME=openai/gpt-oss-120b
-HF_TOKEN=your_token_here
+API_KEY=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+Example for local Groq testing:
+
+```env
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
 Run it with:
@@ -236,13 +253,42 @@ python -m guardian_openenv.baseline
 
 ## Baseline Scores
 
-Because the benchmark tasks were upgraded to the current shopping-protector workflow, you should regenerate the score artifact locally with:
+Scores are written to `outputs/inference_scores.json`. Two baseline agents are provided:
+
+### Rule-based fallback (no API key)
+
+The built-in heuristic agent inspects all sections then submits — no decisions made:
+
+| Task | Difficulty | Score |
+|------|------------|-------|
+| `value-hotel-budget-guard` | Easy | ~0.08 |
+| `airline-seat-upsell-gauntlet` | Medium | ~0.08 |
+| `marketplace-ghost-checkout` | Hard | ~0.08 |
+| **Mean** | | **~0.08** |
+
+### Groq Llama 3.3 70B (measured)
+
+| Task | Difficulty | Score | Steps |
+|------|------------|-------|-------|
+| `value-hotel-budget-guard` | Easy | **0.261** | 9 |
+| `airline-seat-upsell-gauntlet` | Medium | **0.430** | 8 |
+| `marketplace-ghost-checkout` | Hard | **0.244** | 9 |
+| **Mean** | | **0.312** | |
+
+Key grader sub-scores for the medium airline task (best performance):
+- addon_score: 0.50 — removed 1 of 3 manipulative add-ons
+- total_score: 0.999 — perfect true-total estimate ($276.98)
+- evidence_score: 0.999 — all required sections inspected
+- timer_score: 0.001 — missed the fake fare-lock timer (common LLM output format issue)
+
+Scores improve significantly with GPT-4.1 or a prompted agent that includes `timer_is_fake: true` in verify_timer actions.
+
+To regenerate:
 
 ```bash
 python inference.py
 ```
 
-The fresh score artifact will be written to `outputs/inference_scores.json`.
 
 ## Hugging Face Spaces Deployment
 
