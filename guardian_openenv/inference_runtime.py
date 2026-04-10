@@ -362,7 +362,7 @@ def run_inference(
             BaselineEpisodeResult(
                 task_id=task.task_id,
                 difficulty=task.difficulty,
-                final_score=final_score,
+                score=final_score,
                 total_reward=round(total_reward, 4),
                 steps_taken=state.step_count,
                 final_decision=state.decision,
@@ -370,7 +370,7 @@ def run_inference(
             )
         )
 
-    raw_mean = sum(item.final_score for item in results) / len(results) if results else 0.001
+    raw_mean = sum(item.score for item in results) / len(results) if results else 0.001
     summary = BaselineRunSummary(
         model=model,
         tasks=results,

@@ -164,7 +164,7 @@ class StepResult(BaseModel):
 class BaselineEpisodeResult(BaseModel):
     task_id: str
     difficulty: Literal["easy", "medium", "hard"]
-    final_score: float = Field(gt=0.0, lt=1.0)
+    score: float = Field(gt=0.0, lt=1.0)
     total_reward: float
     steps_taken: int = Field(ge=0)
     final_decision: CurrentDecision

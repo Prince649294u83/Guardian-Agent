@@ -72,7 +72,7 @@ def main() -> None:
 
     print(f"[DONE] mean_score={summary.mean_score}", flush=True)
     for task in summary.tasks:
-        print(f"  {task.task_id}: final_score={task.final_score}", flush=True)
+        print(f"  {task.task_id}: score={task.score}", flush=True)
 
 
 if __name__ == "__main__":

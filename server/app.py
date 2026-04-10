@@ -190,7 +190,7 @@ def baseline() -> dict:
             {
                 "task_id": t.task_id,
                 "difficulty": t.difficulty,
-                "final_score": t.final_score,
+                "score": t.score,
                 "total_reward": t.total_reward,
                 "grader_breakdown": t.grader_breakdown,
             }
