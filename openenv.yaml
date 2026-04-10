@@ -12,7 +12,7 @@ app: server.app:app
 port: 8000
 
 tasks:
-  - id: "value-hotel-budget-guard"
+  - id: "value_hotel_budget_guard"
     name: "Protect a hotel shopper from hidden fees and FOMO"
     description: >-
       Act like a manipulation blocker for a hotel shopper. Inspect the
@@ -22,7 +22,7 @@ tasks:
     difficulty: "easy"
     grader: "tasks.value_hotel_budget_guard.grader:grade"
 
-  - id: "airline-seat-upsell-gauntlet"
+  - id: "airline_seat_upsell_gauntlet"
     name: "Navigate an airline upsell funnel before purchase"
     description: >-
       Protect the traveler from a seat-selection upsell gauntlet. Identify
@@ -32,7 +32,7 @@ tasks:
     difficulty: "medium"
     grader: "tasks.airline_seat_upsell_gauntlet.grader:grade"
 
-  - id: "marketplace-ghost-checkout"
+  - id: "marketplace_ghost_checkout"
     name: "Run a ghost checkout before the shopper commits"
     description: >-
       Behave like a premium manipulation blocker. Use the checkout evidence

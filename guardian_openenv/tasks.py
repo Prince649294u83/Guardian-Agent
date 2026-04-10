@@ -40,7 +40,7 @@ class TaskDefinition(BaseModel):
 
 TASKS: list[TaskDefinition] = [
     TaskDefinition(
-        task_id="value-hotel-budget-guard",
+        task_id="value_hotel_budget_guard",
         difficulty="easy",
         title="Protect a hotel shopper from hidden fees and FOMO",
         objective=(
@@ -116,7 +116,7 @@ TASKS: list[TaskDefinition] = [
         max_steps=15,
     ),
     TaskDefinition(
-        task_id="airline-seat-upsell-gauntlet",
+        task_id="airline_seat_upsell_gauntlet",
         difficulty="medium",
         title="Navigate an airline upsell funnel before purchase",
         objective=(
@@ -192,7 +192,7 @@ TASKS: list[TaskDefinition] = [
         max_steps=16,
     ),
     TaskDefinition(
-        task_id="marketplace-ghost-checkout",
+        task_id="marketplace_ghost_checkout",
         difficulty="hard",
         title="Run a ghost checkout before the shopper commits",
         objective=(
