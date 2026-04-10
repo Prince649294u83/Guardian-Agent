@@ -2,8 +2,7 @@
 
 Each ``grade()`` function accepts the environment (or its state) and the
 action/observation logs, evaluates the agent's final decision against the
-gold-standard rubric, and returns ``{"score": float}`` with the score
-strictly inside (0, 1).
+gold-standard rubric, and returns a `float` strictly inside (0, 1).
 
 The ``openenv.yaml`` references these as::
 
@@ -24,13 +23,13 @@ def _clamp(value: float) -> float:
     return min(max(value, 0.001), 0.999)
 
 
-def _grade_task(task_id: str, environment: Any = None, logs: Any = None, **kwargs: Any) -> dict[str, Any]:
+def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = None, **kwargs: Any) -> float:
     """Shared grading logic for any task.
 
     The function extracts the decision from the environment state (if
     available) and delegates to ``grade_decision``.  When the environment
     is not available (e.g. during static validation), a minimal empty
-    decision is graded so the validator still receives a valid score dict.
+    decision is graded so the validator still receives a valid float score.
     """
     task = TASKS_BY_ID[task_id]
 
@@ -61,36 +60,32 @@ def _grade_task(task_id: str, environment: Any = None, logs: Any = None, **kwarg
     breakdown = grade_decision(task, decision, opened_section_ids)
     score = _clamp(breakdown["final_score"])
 
-    return {
-        "score": score,
-        "grader_breakdown": breakdown,
-        "message": f"Task {task_id} graded with score {score:.4f}",
-    }
+    return score
 
 
 # ---------------------------------------------------------------------------
 #  Per-task grader entry-points (referenced in openenv.yaml)
 # ---------------------------------------------------------------------------
 
-def grade_value_hotel_budget_guard(environment: Any = None, logs: Any = None, **kw: Any) -> dict[str, Any]:
+def grade_value_hotel_budget_guard(*args: Any, environment: Any = None, logs: Any = None, **kw: Any) -> float:
     """Grader for the easy hotel-budget task."""
-    return _grade_task("value-hotel-budget-guard", environment, logs, **kw)
+    return _grade_task("value-hotel-budget-guard", *args, environment=environment, logs=logs, **kw)
 
 
-def grade_airline_seat_upsell_gauntlet(environment: Any = None, logs: Any = None, **kw: Any) -> dict[str, Any]:
+def grade_airline_seat_upsell_gauntlet(*args: Any, environment: Any = None, logs: Any = None, **kw: Any) -> float:
     """Grader for the medium airline-upsell task."""
-    return _grade_task("airline-seat-upsell-gauntlet", environment, logs, **kw)
+    return _grade_task("airline-seat-upsell-gauntlet", *args, environment=environment, logs=logs, **kw)
 
 
-def grade_marketplace_ghost_checkout(environment: Any = None, logs: Any = None, **kw: Any) -> dict[str, Any]:
+def grade_marketplace_ghost_checkout(*args: Any, environment: Any = None, logs: Any = None, **kw: Any) -> float:
     """Grader for the hard marketplace-checkout task."""
-    return _grade_task("marketplace-ghost-checkout", environment, logs, **kw)
+    return _grade_task("marketplace-ghost-checkout", *args, environment=environment, logs=logs, **kw)
 
 
 # Also expose a generic ``grade`` entry-point that accepts a task_id kwarg.
-def grade(environment: Any = None, logs: Any = None, task_id: str | None = None, **kw: Any) -> dict[str, Any]:
+def grade(*args: Any, environment: Any = None, logs: Any = None, task_id: str | None = None, **kw: Any) -> float:
     """Generic grader that dispatches to the correct task grader."""
     if task_id is None:
         # Default to the first task if none specified
         task_id = "value-hotel-budget-guard"
-    return _grade_task(task_id, environment, logs, **kw)
+    return _grade_task(task_id, *args, environment=environment, logs=logs, **kw)
