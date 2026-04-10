@@ -30,6 +30,7 @@ RUN pip install --no-cache-dir --no-deps "openenv-core>=0.2.0"
 # ── Step 3: Copy source and install the package itself
 COPY guardian_openenv/ ./guardian_openenv/
 COPY server/ ./server/
+COPY tasks/ ./tasks/
 COPY openenv.yaml inference.py validate_submission.py README.md ./
 
 RUN pip install --no-cache-dir --no-deps -e .
