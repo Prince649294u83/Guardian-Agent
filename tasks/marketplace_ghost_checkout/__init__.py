@@ -1,0 +1,1 @@
+"""Marketplace Ghost Checkout Task."""
