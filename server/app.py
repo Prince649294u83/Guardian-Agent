@@ -81,7 +81,7 @@ def list_tasks() -> list[dict]:
             "description": task.objective,
             "difficulty": task.difficulty,
             "has_grader": True,
-            "grader": f"guardian_openenv.task_graders:grade_{task.task_id.replace('-', '_')}",
+            "grader": f"tasks.{task.task_id}.grader:grade",
         })
     return results
 

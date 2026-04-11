@@ -6,9 +6,9 @@ from guardian_openenv.task_graders import (
 )
 
 GRADERS = [
-    ("value-hotel-budget-guard", grade_value_hotel_budget_guard),
-    ("airline-seat-upsell-gauntlet", grade_airline_seat_upsell_gauntlet),
-    ("marketplace-ghost-checkout", grade_marketplace_ghost_checkout),
+    ("value_hotel_budget_guard", grade_value_hotel_budget_guard),
+    ("airline_seat_upsell_gauntlet", grade_airline_seat_upsell_gauntlet),
+    ("marketplace_ghost_checkout", grade_marketplace_ghost_checkout),
 ]
 
 print("=== Test 1: Called with no arguments ===")

@@ -12,10 +12,10 @@ from guardian_openenv.tasks import TASKS, TASKS_BY_ID
 
 def test_reset_returns_expected_task():
     env = GuardianReviewEnvironment()
-    observation = env.reset("value-hotel-budget-guard")
+    observation = env.reset("value_hotel_budget_guard")
 
-    task = TASKS_BY_ID["value-hotel-budget-guard"]
-    assert observation.task_id == "value-hotel-budget-guard"
+    task = TASKS_BY_ID["value_hotel_budget_guard"]
+    assert observation.task_id == "value_hotel_budget_guard"
     # remaining_steps equals the task's max_steps right after reset
     assert observation.remaining_steps == task.max_steps
     assert observation.current_decision.flagged_patterns == []
@@ -24,9 +24,9 @@ def test_reset_returns_expected_task():
 
 def test_state_reflects_task_after_reset():
     env = GuardianReviewEnvironment()
-    env.reset("airline-seat-upsell-gauntlet")
+    env.reset("airline_seat_upsell_gauntlet")
     state = env.state()
-    assert state.task_id == "airline-seat-upsell-gauntlet"
+    assert state.task_id == "airline_seat_upsell_gauntlet"
     assert state.difficulty == "medium"
     assert state.step_count == 0
     assert state.done is False
@@ -34,8 +34,8 @@ def test_state_reflects_task_after_reset():
 
 def test_step_increases_step_count():
     env = GuardianReviewEnvironment()
-    obs = env.reset("value-hotel-budget-guard")
-    task = TASKS_BY_ID["value-hotel-budget-guard"]
+    obs = env.reset("value_hotel_budget_guard")
+    task = TASKS_BY_ID["value_hotel_budget_guard"]
 
     result = env.step(GuardianAction(action_type=ActionType.INSPECT_SECTION, section_id=task.sections[0].section_id))
     assert env.state().step_count == 1
@@ -59,7 +59,7 @@ def test_reward_score_always_in_open_range():
 
 def test_invalid_section_penalised():
     env = GuardianReviewEnvironment()
-    env.reset("value-hotel-budget-guard")
+    env.reset("value_hotel_budget_guard")
     result = env.step(GuardianAction(action_type=ActionType.INSPECT_SECTION, section_id="NONEXISTENT"))
     assert result.reward.value < 0.0
 
@@ -68,7 +68,7 @@ def test_invalid_section_penalised():
 
 def test_dense_progress_and_final_grade():
     env = GuardianReviewEnvironment()
-    env.reset("value-hotel-budget-guard")
+    env.reset("value_hotel_budget_guard")
 
     env.step(GuardianAction(action_type=ActionType.INSPECT_SECTION, section_id="listing-banner"))
     env.step(GuardianAction(action_type=ActionType.INSPECT_SECTION, section_id="price-summary"))
@@ -99,7 +99,7 @@ def test_dense_progress_and_final_grade():
 
 def test_medium_task_completes():
     env = GuardianReviewEnvironment()
-    env.reset("airline-seat-upsell-gauntlet")
+    env.reset("airline_seat_upsell_gauntlet")
     result = env.step(GuardianAction(action_type=ActionType.SUBMIT_DECISION))
     assert result.done is True
     assert 0.0 < result.reward.score < 1.0
@@ -107,7 +107,7 @@ def test_medium_task_completes():
 
 def test_hard_task_completes():
     env = GuardianReviewEnvironment()
-    env.reset("marketplace-ghost-checkout")
+    env.reset("marketplace_ghost_checkout")
     result = env.step(GuardianAction(action_type=ActionType.SUBMIT_DECISION))
     assert result.done is True
     assert 0.0 < result.reward.score < 1.0
@@ -117,7 +117,7 @@ def test_hard_task_completes():
 
 def test_actions_after_done_return_reward_zero():
     env = GuardianReviewEnvironment()
-    env.reset("value-hotel-budget-guard")
+    env.reset("value_hotel_budget_guard")
     env.step(GuardianAction(action_type=ActionType.SUBMIT_DECISION))
     # Further steps should be no-ops with value=0
     noop = env.step(GuardianAction(action_type=ActionType.SUBMIT_DECISION))
