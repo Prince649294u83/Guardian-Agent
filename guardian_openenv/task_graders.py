@@ -146,17 +146,17 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
 
 def grade_value_hotel_budget_guard(*args: Any, environment: Any = None, logs: Any = None, **kw: Any) -> float:
     """Grader for the easy hotel-budget task."""
-    return _grade_task("value_hotel_budget_guard", *args, environment=environment, logs=logs, **kw)
+    return float(_grade_task("value_hotel_budget_guard", *args, environment=environment, logs=logs, **kw))
 
 
 def grade_airline_seat_upsell_gauntlet(*args: Any, environment: Any = None, logs: Any = None, **kw: Any) -> float:
     """Grader for the medium airline-upsell task."""
-    return _grade_task("airline_seat_upsell_gauntlet", *args, environment=environment, logs=logs, **kw)
+    return float(_grade_task("airline_seat_upsell_gauntlet", *args, environment=environment, logs=logs, **kw))
 
 
 def grade_marketplace_ghost_checkout(*args: Any, environment: Any = None, logs: Any = None, **kw: Any) -> float:
     """Grader for the hard marketplace-checkout task."""
-    return _grade_task("marketplace_ghost_checkout", *args, environment=environment, logs=logs, **kw)
+    return float(_grade_task("marketplace_ghost_checkout", *args, environment=environment, logs=logs, **kw))
 
 
 # Also expose a generic ``grade`` entry-point that accepts a task_id kwarg.
@@ -165,4 +165,4 @@ def grade(*args: Any, environment: Any = None, logs: Any = None, task_id: str | 
     if task_id is None:
         # Default to the first task if none specified
         task_id = "value_hotel_budget_guard"
-    return _grade_task(task_id, *args, environment=environment, logs=logs, **kw)
+    return float(_grade_task(task_id, *args, environment=environment, logs=logs, **kw))
