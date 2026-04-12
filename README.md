@@ -217,7 +217,7 @@ It uses the OpenAI Python client for all LLM calls. Credentials are read in this
 
 | Priority | Variables | Provider |
 |----------|-----------|----------|
-| 1 | `API_BASE_URL` + `MODEL_NAME` + `HF_TOKEN` | HF router / any OpenAI-compat API |
+| 1 | `API_BASE_URL` + `MODEL_NAME` + `API_KEY` | HF router / any OpenAI-compat API |
 | 2 | `OPENAI_API_KEY` (+ optional `OPENAI_MODEL`) | Direct OpenAI |
 | 3 | `GROQ_API_KEY` (+ optional `GROQ_MODEL`) | Groq (Llama 3.3 70B by default) |
 | 4 | *(none)* | Rule-based fallback — lower scores |
@@ -227,7 +227,7 @@ Example for HF submission:
 ```env
 API_BASE_URL=https://router.huggingface.co/v1
 MODEL_NAME=openai/gpt-oss-120b
-HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+API_KEY=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 Example for local Groq testing:

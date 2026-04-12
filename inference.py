@@ -1,11 +1,7 @@
 """Inference entry-point for the Guardian OpenEnv benchmark.
 
-The OpenEnv hackathon validator runs ``python inference.py`` in a fresh
-environment that may lack API keys and may not have the FastAPI container
-running.  This script therefore falls through to the in-process
-``run_inference()`` helper (which has its own rule-based fallback) so that
-a valid ``outputs/inference_scores.json`` is always produced with every
-score strictly inside (0, 1).
+Submission mode intentionally requires the validator-provided proxy variables:
+API_BASE_URL, API_KEY, and MODEL_NAME.
 """
 
 from __future__ import annotations
@@ -45,7 +41,7 @@ def _sanitize_json(path: Path) -> None:
 
 
 def main() -> None:
-    """Run inference using the in-process environment (no HTTP needed)."""
+    """Run inference using strict submission proxy settings."""
     print(f"[{BENCHMARK}] Starting inference…", flush=True)
 
     try:
@@ -55,17 +51,9 @@ def main() -> None:
             log_writer=lambda msg: print(msg, flush=True),
         )
     except Exception as exc:
-        print(f"[ERROR] run_inference raised: {exc}", flush=True)
-        # Last resort: try with non-strict mode
-        try:
-            summary = run_inference(
-                strict_submission_env=False,
-                output_path=OUTPUT_PATH,
-                log_writer=lambda msg: print(msg, flush=True),
-            )
-        except Exception as inner:
-            print(f"[FATAL] Both inference modes failed: {inner}", flush=True)
-            sys.exit(1)
+        print(f"[FATAL] run_inference failed in strict submission mode: {exc}", flush=True)
+        print("[FATAL] Required env vars: API_BASE_URL, API_KEY, MODEL_NAME", flush=True)
+        sys.exit(1)
 
     # Post-process: nuke any stray 0.0 or 1.0 in the written JSON
     _sanitize_json(Path(OUTPUT_PATH))
