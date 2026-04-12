@@ -58,7 +58,13 @@ def root() -> dict:
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "tasks": [task.task_id for task in TASKS]}
+    return {"status": "healthy", "tasks": [task.task_id for task in TASKS]}
+
+
+@app.post("/mcp")
+async def mcp(_: Request) -> dict:
+    """Minimal JSON-RPC endpoint for OpenEnv runtime compatibility checks."""
+    return {"jsonrpc": "2.0", "result": {"status": "ok"}, "id": None}
 
 
 @app.get("/metadata")
