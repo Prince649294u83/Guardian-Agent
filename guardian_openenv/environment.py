@@ -149,7 +149,8 @@ class GuardianReviewEnvironment:
             )
             info["final_score"] = current_score
 
-        reward_value = round(max(-1.0, min(1.0, reward_value)), 4)
+        # Keep reward values strictly inside (0, 1) for validator compatibility.
+        reward_value = round(max(0.001, min(0.999, reward_value)), 4)
         self._state.cumulative_reward = round(self._state.cumulative_reward + reward_value, 4)
         self._state.done = done
 
