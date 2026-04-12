@@ -13,14 +13,15 @@ from guardian_openenv.models import (
     RewardComponent,
     StepResult,
 )
-from guardian_openenv.tasks import TASKS, TASKS_BY_ID
+from guardian_openenv.tasks import TASKS, TASKS_BY_ID, resolve_task_id
 
 
 class GuardianReviewEnvironment:
     def __init__(self, task_id: str | None = None):
         self._task_order = [task.task_id for task in TASKS]
         self._task_cursor = 0
-        self._task = TASKS[0] if task_id is None else TASKS_BY_ID[task_id]
+        resolved_task_id = TASKS[0].task_id if task_id is None else resolve_task_id(task_id)
+        self._task = TASKS_BY_ID[resolved_task_id]
         self._state = GuardianState(
             task_id=self._task.task_id,
             difficulty=self._task.difficulty,
@@ -40,7 +41,7 @@ class GuardianReviewEnvironment:
             if self._state.step_count > 0 or self._state.done:
                 self._task_cursor = (self._task_cursor + 1) % len(self._task_order)
             task_id = self._task_order[self._task_cursor]
-        self._task = TASKS_BY_ID[task_id]
+        self._task = TASKS_BY_ID[resolve_task_id(task_id)]
         self._state = GuardianState(
             task_id=self._task.task_id,
             difficulty=self._task.difficulty,

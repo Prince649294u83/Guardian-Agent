@@ -279,3 +279,27 @@ TASKS: list[TaskDefinition] = [
 
 
 TASKS_BY_ID = {task.task_id: task for task in TASKS}
+
+
+def resolve_task_id(task_id: str | None) -> str:
+    """Resolve a task identifier across common slug variants.
+
+    Supports both underscore and hyphen forms, e.g.
+    `value_hotel_budget_guard` and `value-hotel-budget-guard`.
+    """
+    if task_id is None:
+        return TASKS[0].task_id
+    if task_id in TASKS_BY_ID:
+        return task_id
+
+    normalized = task_id.strip().replace("-", "_")
+    if normalized in TASKS_BY_ID:
+        return normalized
+
+    # Last fallback: compare case-insensitively.
+    lowered = normalized.lower()
+    for key in TASKS_BY_ID:
+        if key.lower() == lowered:
+            return key
+
+    raise KeyError(f"Unknown task_id: {task_id}")

@@ -15,7 +15,7 @@ from typing import Any
 
 from guardian_openenv.graders import grade_decision
 from guardian_openenv.models import CurrentDecision
-from guardian_openenv.tasks import TASKS_BY_ID
+from guardian_openenv.tasks import TASKS_BY_ID, resolve_task_id
 
 
 class GradeResult(dict):
@@ -68,7 +68,8 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
         }
         return mapping.get(task_key, 0.5)
 
-    task = TASKS_BY_ID[task_id]
+    resolved_task_id = resolve_task_id(task_id)
+    task = TASKS_BY_ID[resolved_task_id]
     decision = CurrentDecision()
     opened_section_ids: set[str] = set()
 
@@ -113,7 +114,7 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
     )
     if has_state_signal:
         breakdown = grade_decision(task, decision, opened_section_ids)
-        score = _clip(breakdown.get("final_score", _task_prior_score(task_id)))
+        score = _clip(breakdown.get("final_score", _task_prior_score(resolved_task_id)))
         breakdown = {
             "pattern_score": _clip(breakdown.get("pattern_score", score)),
             "addon_score": _clip(breakdown.get("addon_score", score)),
@@ -126,7 +127,7 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
         }
         return GradeResult(score, breakdown)
 
-    score = _task_prior_score(task_id)
+    score = _task_prior_score(resolved_task_id)
     breakdown = {
         "pattern_score": score,
         "addon_score": score,

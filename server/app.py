@@ -13,7 +13,7 @@ from guardian_openenv.models import (
     GuardianState,
     StepResult,
 )
-from guardian_openenv.tasks import TASKS, TASKS_BY_ID
+from guardian_openenv.tasks import TASKS, TASKS_BY_ID, resolve_task_id
 from guardian_openenv.task_graders import (
     grade_value_hotel_budget_guard,
     grade_airline_seat_upsell_gauntlet,
@@ -143,7 +143,11 @@ async def reset(request: Request) -> GuardianObservation:
             task_id = payload.task_id
     except Exception:  # noqa: BLE001
         pass
-    return env.reset(task_id)
+    try:
+        resolved_task_id = resolve_task_id(task_id) if task_id is not None else None
+    except Exception:
+        resolved_task_id = None
+    return env.reset(resolved_task_id)
 
 
 @app.post("/step", response_model=StepResult)
@@ -182,6 +186,10 @@ async def grader(request: Request) -> dict:
     # If no task_id provided, use the current environment's task
     if task_id is None:
         task_id = env._task.task_id if env._task else TASKS[0].task_id
+    try:
+        task_id = resolve_task_id(task_id)
+    except Exception:
+        task_id = TASKS[0].task_id
 
     # Grade using the task graders (passes environment for state access)
     grade_result = _grade_task(task_id, environment=env)
