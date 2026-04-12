@@ -18,36 +18,42 @@ from guardian_openenv.models import CurrentDecision
 from guardian_openenv.tasks import TASKS_BY_ID
 
 
-class GradeResult(float):
-    """Float-compatible grader result with dict-like access.
+class GradeResult(dict):
+    """Dict-compatible grader result with numeric behavior.
 
-    Some validators treat grader output as a plain float, while others
-    expect a mapping like {"score": ..., "grader_breakdown": ...}.  This
-    class supports both access patterns.
+    This supports validators that expect either:
+    - mapping access: result["score"]
+    - numeric behavior: float(result), 0 < result < 1
     """
 
-    def __new__(cls, score: float, breakdown: dict[str, float]):
-        obj = float.__new__(cls, score)
-        obj.score = score
-        obj.grader_breakdown = breakdown
-        return obj
+    def __init__(self, score: float, breakdown: dict[str, float]):
+        super().__init__(score=score, grader_breakdown=breakdown)
 
-    def __getitem__(self, key: str):
-        if key == "score":
-            return self.score
-        if key == "grader_breakdown":
-            return self.grader_breakdown
-        raise KeyError(key)
+    def __float__(self) -> float:
+        return float(self["score"])
 
-    def get(self, key: str, default=None):
-        if key == "score":
-            return self.score
-        if key == "grader_breakdown":
-            return self.grader_breakdown
-        return default
+    def _num(self) -> float:
+        return float(self)
 
-    def to_dict(self) -> dict[str, object]:
-        return {"score": self.score, "grader_breakdown": self.grader_breakdown}
+    def __lt__(self, other: object) -> bool:
+        return self._num() < float(other)  # type: ignore[arg-type]
+
+    def __le__(self, other: object) -> bool:
+        return self._num() <= float(other)  # type: ignore[arg-type]
+
+    def __gt__(self, other: object) -> bool:
+        return self._num() > float(other)  # type: ignore[arg-type]
+
+    def __ge__(self, other: object) -> bool:
+        return self._num() >= float(other)  # type: ignore[arg-type]
+
+    @property
+    def score(self) -> float:
+        return float(self["score"])
+
+    @property
+    def grader_breakdown(self) -> dict[str, float]:
+        return self["grader_breakdown"]
 
 
 def _clamp(value: float) -> float:
