@@ -56,7 +56,7 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
     deterministic task-specific prior score when trajectory state is absent.
     """
     def _clip(value: float) -> float:
-        return min(max(float(value), 0.001), 0.999)
+        return min(max(float(value), 0.101), 0.899)
 
     def _task_prior_score(task_key: str) -> float:
         # Deterministic per-task priors ensure non-constant scores even when

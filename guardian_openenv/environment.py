@@ -34,7 +34,7 @@ class GuardianReviewEnvironment:
         )
         self._last_opened_section_id: str | None = None
         self._history: list[str] = []
-        self._last_score = 0.001
+        self._last_score = 0.101
 
     def reset(self, task_id: str | None = None) -> GuardianObservation:
         if task_id is None:
@@ -54,7 +54,7 @@ class GuardianReviewEnvironment:
         )
         self._last_opened_section_id = None
         self._history = []
-        self._last_score = 0.001
+        self._last_score = 0.101
         return self._build_observation("New checkout protection task loaded.")
 
     def state(self) -> GuardianState:
@@ -64,9 +64,9 @@ class GuardianReviewEnvironment:
         if self._state.done:
             observation = self._build_observation("Episode already finished. Reset to start a new task.")
             reward = GuardianReward(
-                value=0.0,
+                value=0.101,
                 score=self._last_score,
-                components=[RewardComponent(name="blocked", value=0.0, reason="Episode already complete.")],
+                components=[RewardComponent(name="blocked", value=0.101, reason="Episode already complete.")],
                 reason="No-op after completion.",
             )
             return StepResult(observation=observation, reward=reward, done=True, info={"final_score": self._last_score})
@@ -131,7 +131,7 @@ class GuardianReviewEnvironment:
                         reason="Decision submitted before reviewing the core checkout sections.",
                     )
                 )
-            reward_value = max(0.001, min(0.999, current_score + reward_value))
+            reward_value = max(0.101, min(0.899, current_score + reward_value))
             self._state.done = True
             done = True
             info["final_score"] = current_score
@@ -139,7 +139,7 @@ class GuardianReviewEnvironment:
         if self._state.step_count >= self._state.max_steps and not done:
             self._state.done = True
             done = True
-            reward_value = max(0.001, current_score - 0.1)
+            reward_value = max(0.101, current_score - 0.1)
             message = "Maximum step budget reached before submission."
             components.append(
                 RewardComponent(
@@ -151,7 +151,7 @@ class GuardianReviewEnvironment:
             info["final_score"] = current_score
 
         # Keep reward values strictly inside (0, 1) for validator compatibility.
-        reward_value = round(max(0.001, min(0.999, reward_value)), 4)
+        reward_value = round(max(0.101, min(0.899, reward_value)), 4)
         self._state.cumulative_reward = round(self._state.cumulative_reward + reward_value, 4)
         self._state.done = done
 
