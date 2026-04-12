@@ -23,21 +23,27 @@ def main() -> None:
         raise SystemExit(f"Missing required files: {', '.join(missing)}")
 
     manifest = yaml.safe_load(Path("openenv.yaml").read_text(encoding="utf-8")) or {}
-    manifest_graders = {
-        str(task.get("id")): str(task.get("grader"))
-        for task in manifest.get("tasks", [])
-        if task.get("id") and task.get("grader")
-    }
+    manifest_graders: dict[str, tuple[str, str]] = {}
+    for task in manifest.get("tasks", []):
+        task_id = task.get("id")
+        grader = task.get("grader")
+        if not task_id or not grader:
+            continue
+        if isinstance(grader, dict) and grader.get("module") and grader.get("function"):
+            manifest_graders[str(task_id)] = (str(grader["module"]), str(grader["function"]))
+        elif isinstance(grader, str) and ":" in grader:
+            module_name, function_name = grader.rsplit(":", 1)
+            manifest_graders[str(task_id)] = (module_name, function_name)
 
     env = GuardianReviewEnvironment()
     if len(TASKS) < 3:
         raise SystemExit("At least 3 tasks are required.")
 
     for task in TASKS:
-        grader_path = manifest_graders.get(task.task_id)
-        if not grader_path:
+        grader_ref = manifest_graders.get(task.task_id)
+        if not grader_ref:
             raise SystemExit(f"Task {task.task_id} is missing a grader in openenv.yaml")
-        module_name, function_name = grader_path.rsplit(":", 1)
+        module_name, function_name = grader_ref
         grader_fn = getattr(importlib.import_module(module_name), function_name)
         manifest_score = grader_fn()
         if not isinstance(manifest_score, (int, float)):

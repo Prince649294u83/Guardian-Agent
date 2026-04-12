@@ -84,13 +84,26 @@ def metadata() -> dict:
 def list_tasks() -> list[dict]:
     """List all tasks with metadata — the validator discovers graders here."""
     grader_by_task_id = {
-        "value_hotel_budget_guard": "tasks.value_hotel_budget_guard.grader:grade",
-        "airline_seat_upsell_gauntlet": "tasks.airline_seat_upsell_gauntlet.grader:grade",
-        "marketplace_ghost_checkout": "tasks.marketplace_ghost_checkout.grader:grade",
+        "value_hotel_budget_guard": {
+            "module": "tasks.value_hotel_budget_guard.grader",
+            "function": "grade",
+        },
+        "airline_seat_upsell_gauntlet": {
+            "module": "tasks.airline_seat_upsell_gauntlet.grader",
+            "function": "grade",
+        },
+        "marketplace_ghost_checkout": {
+            "module": "tasks.marketplace_ghost_checkout.grader",
+            "function": "grade",
+        },
     }
     results = []
     for task in TASKS:
-        grader_path = grader_by_task_id.get(task.task_id, "guardian_openenv.task_graders:grade")
+        grader_ref = grader_by_task_id.get(
+            task.task_id,
+            {"module": "guardian_openenv.task_graders", "function": "grade"},
+        )
+        grader_path = f"{grader_ref['module']}:{grader_ref['function']}"
         results.append({
             "id": task.task_id,
             "task_id": task.task_id,
@@ -99,9 +112,11 @@ def list_tasks() -> list[dict]:
             "description": task.objective,
             "difficulty": task.difficulty,
             "has_grader": True,
-            "grader": grader_path,
+            "grader": grader_ref,
             "grader_path": grader_path,
             "grader_fn": grader_path,
+            "grader_module": grader_ref["module"],
+            "grader_function": grader_ref["function"],
         })
     return results
 
