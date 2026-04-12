@@ -84,9 +84,9 @@ def metadata() -> dict:
 def list_tasks() -> list[dict]:
     """List all tasks with metadata — the validator discovers graders here."""
     grader_by_task_id = {
-        "value_hotel_budget_guard": "tasks.value_hotel_budget_guard.grader:grade",
-        "airline_seat_upsell_gauntlet": "tasks.airline_seat_upsell_gauntlet.grader:grade",
-        "marketplace_ghost_checkout": "tasks.marketplace_ghost_checkout.grader:grade",
+        "value_hotel_budget_guard": "guardian_openenv.task_graders:grade_value_hotel_budget_guard",
+        "airline_seat_upsell_gauntlet": "guardian_openenv.task_graders:grade_airline_seat_upsell_gauntlet",
+        "marketplace_ghost_checkout": "guardian_openenv.task_graders:grade_marketplace_ghost_checkout",
     }
     results = []
     for task in TASKS:
