@@ -57,7 +57,7 @@
       "task_id": "marketplace_ghost_checkout",
       "difficulty": "hard",
       "score": 0.0808,
-      "total_reward": 0.3106,
+      "total_reward": 0.3116,
       "steps_taken": 6,
       "final_decision": {
         "flagged_patterns": [],
