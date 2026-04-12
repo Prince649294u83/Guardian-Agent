@@ -15,7 +15,7 @@ from typing import Any
 
 from guardian_openenv.graders import grade_decision
 from guardian_openenv.models import CurrentDecision
-from guardian_openenv.tasks import TASKS_BY_ID, resolve_task_id
+from guardian_openenv.tasks import TASKS_BY_ID
 
 
 class GradeResult(dict):
@@ -56,7 +56,7 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
     deterministic task-specific prior score when trajectory state is absent.
     """
     def _clip(value: float) -> float:
-        return min(max(float(value), 0.101), 0.899)
+        return min(max(float(value), 0.001), 0.999)
 
     def _task_prior_score(task_key: str) -> float:
         # Deterministic per-task priors ensure non-constant scores even when
@@ -68,8 +68,7 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
         }
         return mapping.get(task_key, 0.5)
 
-    resolved_task_id = resolve_task_id(task_id)
-    task = TASKS_BY_ID[resolved_task_id]
+    task = TASKS_BY_ID[task_id]
     decision = CurrentDecision()
     opened_section_ids: set[str] = set()
 
@@ -114,7 +113,7 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
     )
     if has_state_signal:
         breakdown = grade_decision(task, decision, opened_section_ids)
-        score = _clip(breakdown.get("final_score", _task_prior_score(resolved_task_id)))
+        score = _clip(breakdown.get("final_score", _task_prior_score(task_id)))
         breakdown = {
             "pattern_score": _clip(breakdown.get("pattern_score", score)),
             "addon_score": _clip(breakdown.get("addon_score", score)),
@@ -127,7 +126,7 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
         }
         return GradeResult(score, breakdown)
 
-    score = _task_prior_score(resolved_task_id)
+    score = _task_prior_score(task_id)
     breakdown = {
         "pattern_score": score,
         "addon_score": score,
@@ -147,17 +146,17 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
 
 def grade_value_hotel_budget_guard(*args: Any, environment: Any = None, logs: Any = None, **kw: Any) -> float:
     """Grader for the easy hotel-budget task."""
-    return float(_grade_task("value_hotel_budget_guard", *args, environment=environment, logs=logs, **kw))
+    return _grade_task("value_hotel_budget_guard", *args, environment=environment, logs=logs, **kw)
 
 
 def grade_airline_seat_upsell_gauntlet(*args: Any, environment: Any = None, logs: Any = None, **kw: Any) -> float:
     """Grader for the medium airline-upsell task."""
-    return float(_grade_task("airline_seat_upsell_gauntlet", *args, environment=environment, logs=logs, **kw))
+    return _grade_task("airline_seat_upsell_gauntlet", *args, environment=environment, logs=logs, **kw)
 
 
 def grade_marketplace_ghost_checkout(*args: Any, environment: Any = None, logs: Any = None, **kw: Any) -> float:
     """Grader for the hard marketplace-checkout task."""
-    return float(_grade_task("marketplace_ghost_checkout", *args, environment=environment, logs=logs, **kw))
+    return _grade_task("marketplace_ghost_checkout", *args, environment=environment, logs=logs, **kw)
 
 
 # Also expose a generic ``grade`` entry-point that accepts a task_id kwarg.
@@ -166,4 +165,4 @@ def grade(*args: Any, environment: Any = None, logs: Any = None, task_id: str | 
     if task_id is None:
         # Default to the first task if none specified
         task_id = "value_hotel_budget_guard"
-    return float(_grade_task(task_id, *args, environment=environment, logs=logs, **kw))
+    return _grade_task(task_id, *args, environment=environment, logs=logs, **kw)

@@ -13,15 +13,14 @@ from guardian_openenv.models import (
     RewardComponent,
     StepResult,
 )
-from guardian_openenv.tasks import TASKS, TASKS_BY_ID, resolve_task_id
+from guardian_openenv.tasks import TASKS, TASKS_BY_ID
 
 
 class GuardianReviewEnvironment:
     def __init__(self, task_id: str | None = None):
         self._task_order = [task.task_id for task in TASKS]
         self._task_cursor = 0
-        resolved_task_id = TASKS[0].task_id if task_id is None else resolve_task_id(task_id)
-        self._task = TASKS_BY_ID[resolved_task_id]
+        self._task = TASKS[0] if task_id is None else TASKS_BY_ID[task_id]
         self._state = GuardianState(
             task_id=self._task.task_id,
             difficulty=self._task.difficulty,
@@ -34,14 +33,14 @@ class GuardianReviewEnvironment:
         )
         self._last_opened_section_id: str | None = None
         self._history: list[str] = []
-        self._last_score = 0.101
+        self._last_score = 0.001
 
     def reset(self, task_id: str | None = None) -> GuardianObservation:
         if task_id is None:
             if self._state.step_count > 0 or self._state.done:
                 self._task_cursor = (self._task_cursor + 1) % len(self._task_order)
             task_id = self._task_order[self._task_cursor]
-        self._task = TASKS_BY_ID[resolve_task_id(task_id)]
+        self._task = TASKS_BY_ID[task_id]
         self._state = GuardianState(
             task_id=self._task.task_id,
             difficulty=self._task.difficulty,
@@ -54,7 +53,7 @@ class GuardianReviewEnvironment:
         )
         self._last_opened_section_id = None
         self._history = []
-        self._last_score = 0.101
+        self._last_score = 0.001
         return self._build_observation("New checkout protection task loaded.")
 
     def state(self) -> GuardianState:
@@ -64,9 +63,9 @@ class GuardianReviewEnvironment:
         if self._state.done:
             observation = self._build_observation("Episode already finished. Reset to start a new task.")
             reward = GuardianReward(
-                value=0.101,
+                value=0.0,
                 score=self._last_score,
-                components=[RewardComponent(name="blocked", value=0.101, reason="Episode already complete.")],
+                components=[RewardComponent(name="blocked", value=0.0, reason="Episode already complete.")],
                 reason="No-op after completion.",
             )
             return StepResult(observation=observation, reward=reward, done=True, info={"final_score": self._last_score})
@@ -131,7 +130,7 @@ class GuardianReviewEnvironment:
                         reason="Decision submitted before reviewing the core checkout sections.",
                     )
                 )
-            reward_value = max(0.101, min(0.899, current_score + reward_value))
+            reward_value = max(0.001, min(0.999, current_score + reward_value))
             self._state.done = True
             done = True
             info["final_score"] = current_score
@@ -139,7 +138,7 @@ class GuardianReviewEnvironment:
         if self._state.step_count >= self._state.max_steps and not done:
             self._state.done = True
             done = True
-            reward_value = max(0.101, current_score - 0.1)
+            reward_value = max(0.001, current_score - 0.1)
             message = "Maximum step budget reached before submission."
             components.append(
                 RewardComponent(
@@ -151,7 +150,7 @@ class GuardianReviewEnvironment:
             info["final_score"] = current_score
 
         # Keep reward values strictly inside (0, 1) for validator compatibility.
-        reward_value = round(max(0.101, min(0.899, reward_value)), 4)
+        reward_value = round(max(0.001, min(0.999, reward_value)), 4)
         self._state.cumulative_reward = round(self._state.cumulative_reward + reward_value, 4)
         self._state.done = done
 
