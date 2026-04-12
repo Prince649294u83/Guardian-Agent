@@ -27,5 +27,12 @@ dev = [
 server = "server.app:main"
 
 [tool.setuptools]
-packages = ["guardian_openenv", "server"]
+packages = [
+  "guardian_openenv",
+  "server",
+  "tasks",
+  "tasks.value_hotel_budget_guard",
+  "tasks.airline_seat_upsell_gauntlet",
+  "tasks.marketplace_ghost_checkout",
+]
 
