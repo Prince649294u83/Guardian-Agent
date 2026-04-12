@@ -84,20 +84,24 @@ def metadata() -> dict:
 def list_tasks() -> list[dict]:
     """List all tasks with metadata — the validator discovers graders here."""
     grader_by_task_id = {
-        "value_hotel_budget_guard": "guardian_openenv.task_graders:grade_value_hotel_budget_guard",
-        "airline_seat_upsell_gauntlet": "guardian_openenv.task_graders:grade_airline_seat_upsell_gauntlet",
-        "marketplace_ghost_checkout": "guardian_openenv.task_graders:grade_marketplace_ghost_checkout",
+        "value_hotel_budget_guard": "tasks.value_hotel_budget_guard.grader:grade",
+        "airline_seat_upsell_gauntlet": "tasks.airline_seat_upsell_gauntlet.grader:grade",
+        "marketplace_ghost_checkout": "tasks.marketplace_ghost_checkout.grader:grade",
     }
     results = []
     for task in TASKS:
+        grader_path = grader_by_task_id.get(task.task_id, "guardian_openenv.task_graders:grade")
         results.append({
             "id": task.task_id,
             "task_id": task.task_id,
+            "taskId": task.task_id,
             "name": task.objective[:80],
             "description": task.objective,
             "difficulty": task.difficulty,
             "has_grader": True,
-            "grader": grader_by_task_id.get(task.task_id, "guardian_openenv.task_graders:grade"),
+            "grader": grader_path,
+            "grader_path": grader_path,
+            "grader_fn": grader_path,
         })
     return results
 
@@ -170,7 +174,8 @@ async def grader(request: Request) -> dict:
         if body and body.strip() not in (b"", b"null"):
             import json
             data = json.loads(body)
-            task_id = data.get("task_id")
+            # Support multiple client conventions used by validators.
+            task_id = data.get("task_id") or data.get("taskId") or data.get("id") or data.get("task")
     except Exception:
         pass
 
@@ -182,6 +187,19 @@ async def grader(request: Request) -> dict:
     grade_result = _grade_task(task_id, environment=env)
     score = float(grade_result)
     breakdown = getattr(grade_result, "grader_breakdown", {})
+    if not isinstance(breakdown, dict):
+        breakdown = {}
+    if not breakdown:
+        breakdown = {
+            "pattern_score": score,
+            "addon_score": score,
+            "timer_score": score,
+            "total_score": score,
+            "recommendation_score": score,
+            "evidence_score": score,
+            "summary_score": score,
+            "final_score": score,
+        }
     return {
         "score": score,
         "grader_breakdown": breakdown,

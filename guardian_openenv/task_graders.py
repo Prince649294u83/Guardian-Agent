@@ -6,59 +6,14 @@ gold-standard rubric, and returns a `float` strictly inside (0, 1).
 
 The ``openenv.yaml`` references these as::
 
-    grader: "guardian_openenv.task_graders:grade_<task_slug>"
+    grader: "tasks.<task_slug>.grader:grade"
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from guardian_openenv.graders import grade_decision
-from guardian_openenv.models import CurrentDecision
-from guardian_openenv.tasks import TASKS_BY_ID
 
-
-class GradeResult(dict):
-    """Dict-compatible grader result with numeric behavior.
-
-    This supports validators that expect either:
-    - mapping access: result["score"]
-    - numeric behavior: float(result), 0 < result < 1
-    """
-
-    def __init__(self, score: float, breakdown: dict[str, float]):
-        super().__init__(score=score, grader_breakdown=breakdown)
-
-    def __float__(self) -> float:
-        return float(self["score"])
-
-    def _num(self) -> float:
-        return float(self)
-
-    def __lt__(self, other: object) -> bool:
-        return self._num() < float(other)  # type: ignore[arg-type]
-
-    def __le__(self, other: object) -> bool:
-        return self._num() <= float(other)  # type: ignore[arg-type]
-
-    def __gt__(self, other: object) -> bool:
-        return self._num() > float(other)  # type: ignore[arg-type]
-
-    def __ge__(self, other: object) -> bool:
-        return self._num() >= float(other)  # type: ignore[arg-type]
-
-    @property
-    def score(self) -> float:
-        return float(self["score"])
-
-    @property
-    def grader_breakdown(self) -> dict[str, float]:
-        return self["grader_breakdown"]
-
-
-def _clamp(value: float) -> float:
-    """Ensure a score is strictly between 0 and 1."""
-    return min(max(value, 0.001), 0.999)
 
 
 def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = None, **kwargs: Any) -> float:
