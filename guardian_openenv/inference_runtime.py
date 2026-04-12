@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Callable
@@ -65,12 +66,12 @@ def build_client(strict_submission_env: bool = True) -> tuple[OpenAI, str]:
 
     api_base_url = os.environ.get("API_BASE_URL")
     model_name = os.environ.get("MODEL_NAME")
-    api_key = os.environ.get("API_KEY")
+    api_key = os.environ.get("HF_TOKEN") or os.environ.get("API_KEY")
 
     if strict_submission_env:
         required = {
             "API_BASE_URL": api_base_url,
-            "API_KEY": api_key,
+            "HF_TOKEN": api_key,
         }
         missing = [name for name, value in required.items() if not value]
         if missing:
@@ -117,7 +118,7 @@ def build_client(strict_submission_env: bool = True) -> tuple[OpenAI, str]:
         return OpenAI(api_key=groq_key, base_url="https://api.groq.com/openai/v1"), groq_model
 
     raise RuntimeError(
-        "Provide one of: API_BASE_URL+API_KEY, OPENAI_API_KEY, or GROQ_API_KEY to run inference."
+        "Provide one of: API_BASE_URL+HF_TOKEN, API_BASE_URL+API_KEY, OPENAI_API_KEY, or GROQ_API_KEY to run inference."
     )
 
 
@@ -296,8 +297,50 @@ def next_action(client: OpenAI, model: str, observation) -> GuardianAction:
     raise last_error
 
 
-def _log(prefix: str, payload: dict, log_writer: Callable[[str], None]) -> None:
-    log_writer(f"{prefix} {json.dumps(payload, separators=(',', ':'))}")
+def _stderr(message: str) -> None:
+    print(message, file=sys.stderr, flush=True)
+
+
+def _format_action(action: GuardianAction) -> str:
+    payload = action.model_dump(mode="json", exclude_none=True)
+    return json.dumps(payload, separators=(",", ":"))
+
+
+def _log_start(task_id: str, model: str, log_writer: Callable[[str], None]) -> None:
+    log_writer(f"[START] task={task_id} env=guardian-openenv model={model}")
+
+
+def _log_step(
+    step_index: int,
+    action: GuardianAction,
+    reward_value: float,
+    done: bool,
+    log_writer: Callable[[str], None],
+    *,
+    error: str | None = None,
+) -> None:
+    action_str = _format_action(action)
+    done_str = str(done).lower()
+    safe_reward = min(max(float(reward_value), 0.01), 0.99)
+    error_str = "null" if not error else error.replace("\n", " ")[:240]
+    log_writer(
+        f"[STEP] step={step_index} action={action_str} reward={safe_reward:.2f} "
+        f"done={done_str} error={error_str}"
+    )
+
+
+def _log_end(
+    success: bool,
+    steps_taken: int,
+    score: float,
+    rewards: list[float],
+    log_writer: Callable[[str], None],
+) -> None:
+    rewards_str = ",".join(f"{min(max(float(reward), 0.01), 0.99):.2f}" for reward in rewards)
+    success_str = str(success).lower()
+    log_writer(
+        f"[END] success={success_str} steps={steps_taken} score={score:.2f} rewards={rewards_str}"
+    )
 
 
 def _fallback_action(observation) -> GuardianAction:
@@ -333,16 +376,11 @@ def run_inference(
     env = GuardianReviewEnvironment()
     results: list[BaselineEpisodeResult] = []
 
-    _log("[START]", {"model": model, "task_count": len(TASKS)}, log_writer)
-
     for task in TASKS:
         observation = env.reset(task.task_id)
         final_step = None
-        _log(
-            "[STEP]",
-            {"task_id": task.task_id, "event": "task_start", "difficulty": task.difficulty},
-            log_writer,
-        )
+        _log_start(task.task_id, model, log_writer)
+        task_rewards: list[float] = []
         while not observation.done:
             try:
                 if client is not None:
@@ -350,22 +388,19 @@ def run_inference(
                 else:
                     action = _fallback_action(observation)
             except Exception as action_exc:  # noqa: BLE001
-                log_writer(f"[WARN] Action generation failed: {action_exc}; using fallback.")
+                _stderr(f"[WARN] Action generation failed for {task.task_id}: {action_exc}; using fallback.")
                 action = _fallback_action(observation)
 
             final_step = env.step(action)
             observation = final_step.observation
-            _log(
-                "[STEP]",
-                {
-                    "task_id": task.task_id,
-                    "step_index": env.state().step_count,
-                    "action_type": action.action_type.value,
-                    "reward": final_step.reward.value,
-                    "score": final_step.reward.score,
-                    "done": final_step.done,
-                },
+            task_rewards.append(final_step.reward.value)
+            _log_step(
+                env.state().step_count,
+                action,
+                final_step.reward.value,
+                final_step.done,
                 log_writer,
+                error=None,
             )
             if final_step.done:
                 break
@@ -402,6 +437,13 @@ def run_inference(
                 grader_breakdown=safe_breakdown,
             )
         )
+        _log_end(
+            success=final_score >= 0.01,
+            steps_taken=state.step_count,
+            score=final_score,
+            rewards=task_rewards,
+            log_writer=log_writer,
+        )
 
     raw_mean = sum(item.score for item in results) / len(results) if results else 0.101
     summary = BaselineRunSummary(
@@ -412,10 +454,4 @@ def run_inference(
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(summary.model_dump_json(indent=2), encoding="utf-8")
-
-    _log(
-        "[END]",
-        {"model": model, "mean_score": summary.mean_score, "task_count": len(summary.tasks), "output_path": output_path},
-        log_writer,
-    )
     return summary
