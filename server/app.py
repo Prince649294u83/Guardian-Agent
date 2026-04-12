@@ -51,6 +51,11 @@ app = FastAPI(
 #  Standard OpenEnv Endpoints
 # ---------------------------------------------------------------------------
 
+@app.get("/")
+def root() -> dict:
+    """Root health endpoint used by platform probes and humans."""
+    return {"status": "ok", "name": "guardian-openenv"}
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "tasks": [task.task_id for task in TASKS]}
