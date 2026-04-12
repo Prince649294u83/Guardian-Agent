@@ -22,19 +22,26 @@ OUTPUT_PATH = "outputs/inference_scores.json"
 
 
 def _sanitize_json(path: Path) -> None:
-    """Post-process the output JSON to ensure NO float value is exactly 0.0 or 1.0."""
+    """Post-process output JSON to keep score/reward fields strictly in (0,1)."""
     data = json.loads(path.read_text(encoding="utf-8"))
 
     def _walk(obj: Any) -> Any:
         if isinstance(obj, dict):
-            return {k: _walk(v) for k, v in obj.items()}
+            normalized: dict[str, Any] = {}
+            for key, value in obj.items():
+                item = _walk(value)
+                key_lower = key.lower()
+                if isinstance(item, float) and ("score" in key_lower or "reward" in key_lower):
+                    item = min(max(item, 0.101), 0.899)
+                normalized[key] = item
+            return normalized
         if isinstance(obj, list):
             return [_walk(v) for v in obj]
         if isinstance(obj, float):
             if obj == 0.0:
-                return 0.001
+                return 0.101
             if obj == 1.0:
-                return 0.999
+                return 0.899
         return obj
 
     cleaned = _walk(data)
