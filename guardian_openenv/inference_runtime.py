@@ -307,10 +307,13 @@ def run_inference(
     output_path: str,
     log_writer: Callable[[str], None],
 ) -> BaselineRunSummary:
-    # Try to build an LLM client; fall back to rule-based agent when API keys are absent.
+    # In submission mode, require an LLM client configured via validator-injected vars.
+    # In non-strict mode, allow a rule-based fallback for local development.
     try:
         client, model = build_client(strict_submission_env=strict_submission_env)
     except RuntimeError as exc:
+        if strict_submission_env:
+            raise
         log_writer(f"[WARN] No LLM client available ({exc}); using rule-based fallback.")
         client, model = None, "rule-based-fallback"
 
