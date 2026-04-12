@@ -64,16 +64,22 @@ def build_client(strict_submission_env: bool = True) -> tuple[OpenAI, str]:
     load_dotenv()
 
     api_base_url = os.environ.get("API_BASE_URL")
-    model_name = os.environ.get("MODEL_NAME", "default-proxy-model")
-    api_key = os.environ.get("API_KEY", os.environ.get("HF_TOKEN"))
+    model_name = os.environ.get("MODEL_NAME")
+    hf_token = os.environ.get("HF_TOKEN")
+    api_key = os.environ.get("API_KEY", hf_token)
 
     if strict_submission_env:
-        missing = [name for name, value in {"API_BASE_URL": api_base_url, "API_KEY": api_key}.items() if not value]
+        required = {
+            "API_BASE_URL": api_base_url,
+            "MODEL_NAME": model_name,
+            "HF_TOKEN": hf_token,
+        }
+        missing = [name for name, value in required.items() if not value]
         if missing:
             raise RuntimeError(
                 f"Missing required environment variables for inference: {', '.join(missing)}"
             )
-        return OpenAI(api_key=api_key, base_url=api_base_url), model_name
+        return OpenAI(api_key=hf_token, base_url=api_base_url), model_name
 
     # Non-strict: try all supported provider patterns in priority order
     openai_key = os.environ.get("OPENAI_API_KEY")
@@ -85,7 +91,7 @@ def build_client(strict_submission_env: bool = True) -> tuple[OpenAI, str]:
 
     # 1) Explicit API_BASE_URL + API_KEY (HF router, Together, etc.)
     if api_base_url and api_key:
-        return OpenAI(api_key=api_key, base_url=api_base_url), model_name
+        return OpenAI(api_key=api_key, base_url=api_base_url), model_name or "default-proxy-model"
 
     # 2) Direct OpenAI
     if openai_key:
