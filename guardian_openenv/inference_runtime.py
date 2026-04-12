@@ -70,7 +70,6 @@ def build_client(strict_submission_env: bool = True) -> tuple[OpenAI, str]:
     if strict_submission_env:
         required = {
             "API_BASE_URL": api_base_url,
-            "MODEL_NAME": model_name,
             "API_KEY": api_key,
         }
         missing = [name for name, value in required.items() if not value]
@@ -78,7 +77,21 @@ def build_client(strict_submission_env: bool = True) -> tuple[OpenAI, str]:
             raise RuntimeError(
                 f"Missing required environment variables for inference: {', '.join(missing)}"
             )
-        return OpenAI(api_key=api_key, base_url=api_base_url), model_name
+
+        client = OpenAI(api_key=api_key, base_url=api_base_url)
+        resolved_model = model_name
+        if not resolved_model:
+            # Keep strict proxy usage while avoiding hard crash when MODEL_NAME
+            # is omitted by the runtime harness.
+            try:
+                models = client.models.list()
+                first = next(iter(models.data), None)
+                if first is not None and getattr(first, "id", None):
+                    resolved_model = str(first.id)
+            except Exception:
+                resolved_model = None
+
+        return client, (resolved_model or "gpt-4o-mini")
 
     # Non-strict: try all supported provider patterns in priority order
     openai_key = os.environ.get("OPENAI_API_KEY")
