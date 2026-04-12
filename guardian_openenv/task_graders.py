@@ -18,12 +18,44 @@ from guardian_openenv.models import CurrentDecision
 from guardian_openenv.tasks import TASKS_BY_ID
 
 
+class GradeResult(float):
+    """Float-compatible grader result with dict-like access.
+
+    Some validators treat grader output as a plain float, while others
+    expect a mapping like {"score": ..., "grader_breakdown": ...}.  This
+    class supports both access patterns.
+    """
+
+    def __new__(cls, score: float, breakdown: dict[str, float]):
+        obj = float.__new__(cls, score)
+        obj.score = score
+        obj.grader_breakdown = breakdown
+        return obj
+
+    def __getitem__(self, key: str):
+        if key == "score":
+            return self.score
+        if key == "grader_breakdown":
+            return self.grader_breakdown
+        raise KeyError(key)
+
+    def get(self, key: str, default=None):
+        if key == "score":
+            return self.score
+        if key == "grader_breakdown":
+            return self.grader_breakdown
+        return default
+
+    def to_dict(self) -> dict[str, object]:
+        return {"score": self.score, "grader_breakdown": self.grader_breakdown}
+
+
 def _clamp(value: float) -> float:
     """Ensure a score is strictly between 0 and 1."""
     return min(max(value, 0.001), 0.999)
 
 
-def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = None, **kwargs: Any) -> float:
+def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = None, **kwargs: Any) -> GradeResult:
     """Shared grading logic for any task.
 
     The function extracts the decision from the environment state (if
@@ -60,7 +92,7 @@ def _grade_task(task_id: str, *args: Any, environment: Any = None, logs: Any = N
     breakdown = grade_decision(task, decision, opened_section_ids)
     score = _clamp(breakdown["final_score"])
 
-    return score
+    return GradeResult(score, breakdown)
 
 
 # ---------------------------------------------------------------------------

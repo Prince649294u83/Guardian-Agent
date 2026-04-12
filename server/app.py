@@ -168,8 +168,14 @@ async def grader(request: Request) -> dict:
         task_id = env._task.task_id if env._task else TASKS[0].task_id
 
     # Grade using the task graders (passes environment for state access)
-    score = _grade_task(task_id, environment=env)
-    return {"score": score}
+    grade_result = _grade_task(task_id, environment=env)
+    score = float(grade_result)
+    breakdown = getattr(grade_result, "grader_breakdown", {})
+    return {
+        "score": score,
+        "grader_breakdown": breakdown,
+        "message": "Task graded successfully.",
+    }
 
 
 @app.post("/grade")
